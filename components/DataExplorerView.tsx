@@ -1,16 +1,21 @@
 
 import React, { useState, useEffect } from 'react';
-import { Database, Table as TableIcon, Activity, Calendar, HardDrive, FileSpreadsheet, Search } from 'lucide-react';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { Database, Table as TableIcon, Activity, Calendar, HardDrive, FileSpreadsheet, Search, Clock, Zap, Layers } from 'lucide-react';
+import { ResponsiveContainer, ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
 // Mock Data Interfaces
 interface MarketDataRow {
-  date: string;
+  timestamp: string; // ISO String or Time String
   open: number;
   high: number;
   low: number;
   close: number;
   volume: number;
+  // HFT / Intraday Fields
+  bid?: number;
+  ask?: number;
+  bidSize?: number;
+  askSize?: number;
 }
 
 interface Dataset {
@@ -20,13 +25,14 @@ interface Dataset {
   source: string;
   rows: number;
   lastUpdated: string;
+  type: 'Daily' | 'Intraday (1m)' | 'Tick (L2)';
 }
 
 const MOCK_DATASETS: Dataset[] = [
-  { id: '1', symbol: 'AAPL', name: 'Apple Inc.', source: 'TickDB Primary', rows: 2500, lastUpdated: '2024-03-10' },
-  { id: '2', symbol: 'TSLA', name: 'Tesla Inc.', source: 'TickDB Primary', rows: 2500, lastUpdated: '2024-03-10' },
-  { id: '3', symbol: 'BTC-USD', name: 'Bitcoin', source: 'Crypto Stream', rows: 15000, lastUpdated: 'Live' },
-  { id: '4', symbol: 'SPY_5MIN', name: 'SPDR S&P 500 (5min)', source: 'Parquet Archive', rows: 78000, lastUpdated: '2023-12-31' },
+  { id: '1', symbol: 'AAPL', name: 'Apple Inc.', source: 'End-of-Day DB', rows: 2500, lastUpdated: '2024-03-10', type: 'Daily' },
+  { id: '2', symbol: 'NVDA_1MIN', name: 'NVIDIA Corp (1m)', source: 'TickDB Primary', rows: 39000, lastUpdated: 'Live', type: 'Intraday (1m)' },
+  { id: '3', symbol: 'BTC-USD', name: 'Bitcoin Perp', source: 'Crypto Stream', rows: 15000, lastUpdated: 'Live', type: 'Intraday (1m)' },
+  { id: '4', symbol: 'ES_FUT', name: 'E-Mini S&P 500', source: 'L2 OrderBook', rows: 1500000, lastUpdated: 'Live', type: 'Tick (L2)' },
 ];
 
 const DataExplorerView: React.FC = () => {
@@ -35,42 +41,76 @@ const DataExplorerView: React.FC = () => {
   const [data, setData] = useState<MarketDataRow[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Generate deterministic mock data based on symbol
+  // Generate deterministic mock data based on symbol and type
   useEffect(() => {
     setLoading(true);
     // Simulate fetch latency
     setTimeout(() => {
         const generatedData: MarketDataRow[] = [];
-        let price = selectedDataset.symbol.includes('BTC') ? 65000 : 150;
-        const now = new Date();
+        let price = selectedDataset.symbol.includes('BTC') ? 65000 : selectedDataset.symbol.includes('ES') ? 5200 : 150;
         
-        for (let i = 0; i < 100; i++) {
-            const date = new Date(now);
-            date.setDate(date.getDate() - (100 - i));
+        const isIntraday = selectedDataset.type !== 'Daily';
+        const rowsToGen = isIntraday ? 200 : 100;
+        
+        const now = new Date();
+        // If Intraday, start at 9:30 AM today
+        if (isIntraday) {
+            now.setHours(9, 30, 0, 0);
+        }
+
+        for (let i = 0; i < rowsToGen; i++) {
+            let timeStr = "";
+            let change = 0;
+            let volBase = 0;
+
+            if (isIntraday) {
+                // Add minutes
+                const t = new Date(now.getTime() + i * 60000);
+                timeStr = t.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                volBase = Math.random() * 0.0005; // Lower volatility per minute
+            } else {
+                // Subtract days
+                const d = new Date(now);
+                d.setDate(d.getDate() - (rowsToGen - i));
+                timeStr = d.toISOString().split('T')[0];
+                volBase = Math.random() * 0.03; // Higher volatility per day
+            }
             
-            const volBase = Math.random() * 0.05; // 5% daily swing
-            const change = (Math.random() - 0.48) * volBase; 
+            change = (Math.random() - 0.48) * volBase * (selectedDataset.symbol.includes('BTC') ? 3 : 1);
             
             const open = price;
             const close = price * (1 + change);
-            const high = Math.max(open, close) * (1 + Math.random() * 0.01);
-            const low = Math.min(open, close) * (1 - Math.random() * 0.01);
-            const volume = Math.floor(1000000 + Math.random() * 500000);
+            const high = Math.max(open, close) * (1 + Math.random() * (isIntraday ? 0.0005 : 0.01));
+            const low = Math.min(open, close) * (1 - Math.random() * (isIntraday ? 0.0005 : 0.01));
+            const volume = Math.floor((isIntraday ? 1000 : 1000000) + Math.random() * (isIntraday ? 5000 : 500000));
 
-            generatedData.push({
-                date: date.toISOString().split('T')[0],
+            const row: MarketDataRow = {
+                timestamp: timeStr,
                 open: parseFloat(open.toFixed(2)),
                 high: parseFloat(high.toFixed(2)),
                 low: parseFloat(low.toFixed(2)),
                 close: parseFloat(close.toFixed(2)),
                 volume
-            });
+            };
+
+            // Add L1/Orderbook Data for Intraday
+            if (isIntraday) {
+                const spread = price * 0.0002; // 2bps spread
+                row.bid = parseFloat((close - spread).toFixed(2));
+                row.ask = parseFloat((close + spread).toFixed(2));
+                row.bidSize = Math.floor(Math.random() * 100 + 10);
+                row.askSize = Math.floor(Math.random() * 100 + 10);
+            }
+
+            generatedData.push(row);
             price = close;
         }
         setData(generatedData);
         setLoading(false);
     }, 400);
   }, [selectedDataset]);
+
+  const isIntradayView = selectedDataset.type !== 'Daily';
 
   return (
     <div className="h-full flex flex-col p-4 md:p-6 max-w-7xl mx-auto gap-6">
@@ -110,11 +150,16 @@ const DataExplorerView: React.FC = () => {
                         }`}
                     >
                         <div className={`p-2 rounded-lg ${selectedDataset.id === ds.id ? 'bg-purple-500 text-white' : 'bg-slate-800 text-slate-400 group-hover:bg-slate-700'}`}>
-                            {ds.source.includes('Tick') ? <HardDrive size={16} /> : <FileSpreadsheet size={16} />}
+                            {ds.type === 'Daily' ? <Calendar size={16} /> : <Zap size={16} />}
                         </div>
                         <div className="min-w-0">
                             <h4 className={`text-sm font-bold ${selectedDataset.id === ds.id ? 'text-white' : 'text-slate-300'}`}>{ds.symbol}</h4>
-                            <p className="text-[10px] text-slate-500 truncate">{ds.source}</p>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-slate-500 truncate">{ds.source}</span>
+                                {ds.type !== 'Daily' && (
+                                    <span className="text-[9px] px-1 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20">HFT</span>
+                                )}
+                            </div>
                         </div>
                     </button>
                 ))}
@@ -131,10 +176,13 @@ const DataExplorerView: React.FC = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 border border-slate-800 rounded-xl p-4">
                 <div className="flex items-center gap-4">
                     <div>
-                        <h2 className="text-lg font-bold text-white">{selectedDataset.symbol}</h2>
+                        <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                            {selectedDataset.symbol}
+                            {isIntradayView && <span className="text-xs bg-purple-600 px-2 py-0.5 rounded text-white">LIVE</span>}
+                        </h2>
                         <div className="flex items-center gap-3 text-xs text-slate-400">
                             <span className="flex items-center gap-1"><HardDrive size={12} /> {selectedDataset.source}</span>
-                            <span className="flex items-center gap-1"><Calendar size={12} /> Last: {selectedDataset.lastUpdated}</span>
+                            <span className="flex items-center gap-1"><Clock size={12} /> Type: {selectedDataset.type}</span>
                         </div>
                     </div>
                 </div>
@@ -170,23 +218,33 @@ const DataExplorerView: React.FC = () => {
                         <table className="w-full text-left text-sm text-slate-400">
                             <thead className="bg-slate-950 text-slate-200 sticky top-0 font-mono text-xs uppercase tracking-wider z-10">
                                 <tr>
-                                    <th className="px-6 py-3 font-medium border-b border-slate-800">Date</th>
-                                    <th className="px-6 py-3 font-medium border-b border-slate-800 text-right">Open</th>
-                                    <th className="px-6 py-3 font-medium border-b border-slate-800 text-right">High</th>
-                                    <th className="px-6 py-3 font-medium border-b border-slate-800 text-right">Low</th>
-                                    <th className="px-6 py-3 font-medium border-b border-slate-800 text-right">Close</th>
+                                    <th className="px-6 py-3 font-medium border-b border-slate-800">Time</th>
+                                    <th className="px-6 py-3 font-medium border-b border-slate-800 text-right">Price (Close)</th>
                                     <th className="px-6 py-3 font-medium border-b border-slate-800 text-right">Volume</th>
+                                    {isIntradayView && (
+                                        <>
+                                            <th className="px-6 py-3 font-medium border-b border-slate-800 text-right text-emerald-500/70">Bid</th>
+                                            <th className="px-6 py-3 font-medium border-b border-slate-800 text-right text-red-500/70">Ask</th>
+                                            <th className="px-6 py-3 font-medium border-b border-slate-800 text-right text-slate-500">Bid Sz</th>
+                                            <th className="px-6 py-3 font-medium border-b border-slate-800 text-right text-slate-500">Ask Sz</th>
+                                        </>
+                                    )}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-800/50 font-mono">
                                 {data.map((row, idx) => (
                                     <tr key={idx} className="hover:bg-slate-800/30 transition-colors">
-                                        <td className="px-6 py-2.5 whitespace-nowrap text-slate-300">{row.date}</td>
-                                        <td className="px-6 py-2.5 whitespace-nowrap text-right">{row.open.toFixed(2)}</td>
-                                        <td className="px-6 py-2.5 whitespace-nowrap text-right text-emerald-400">{row.high.toFixed(2)}</td>
-                                        <td className="px-6 py-2.5 whitespace-nowrap text-right text-red-400">{row.low.toFixed(2)}</td>
+                                        <td className="px-6 py-2.5 whitespace-nowrap text-slate-300">{row.timestamp}</td>
                                         <td className="px-6 py-2.5 whitespace-nowrap text-right text-slate-200 font-bold">{row.close.toFixed(2)}</td>
                                         <td className="px-6 py-2.5 whitespace-nowrap text-right text-slate-500">{row.volume.toLocaleString()}</td>
+                                        {isIntradayView && (
+                                            <>
+                                                <td className="px-6 py-2.5 whitespace-nowrap text-right text-emerald-400">{row.bid?.toFixed(2)}</td>
+                                                <td className="px-6 py-2.5 whitespace-nowrap text-right text-red-400">{row.ask?.toFixed(2)}</td>
+                                                <td className="px-6 py-2.5 whitespace-nowrap text-right text-slate-500">{row.bidSize}</td>
+                                                <td className="px-6 py-2.5 whitespace-nowrap text-right text-slate-500">{row.askSize}</td>
+                                            </>
+                                        )}
                                     </tr>
                                 ))}
                             </tbody>
@@ -196,22 +254,50 @@ const DataExplorerView: React.FC = () => {
                     <div className="h-full p-4 md:p-6">
                         <div className="h-full w-full">
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={data}>
+                                <ComposedChart data={data}>
                                     <defs>
                                         <linearGradient id="colorClose" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
                                             <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
                                         </linearGradient>
+                                        <linearGradient id="colorSpread" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                        </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                                    <XAxis dataKey="date" stroke="#64748b" tick={{fontSize: 10}} tickFormatter={(v) => v.substring(5)} />
+                                    <XAxis 
+                                        dataKey="timestamp" 
+                                        stroke="#64748b" 
+                                        tick={{fontSize: 10}} 
+                                        interval={isIntradayView ? 20 : 'preserveStartEnd'}
+                                    />
                                     <YAxis domain={['auto', 'auto']} stroke="#64748b" tick={{fontSize: 11}} width={50} />
                                     <Tooltip 
                                         contentStyle={{backgroundColor: '#0f172a', borderColor: '#334155', color: '#e2e8f0'}} 
-                                        itemStyle={{color: '#e2e8f0'}}
+                                        itemStyle={{fontSize: 12}}
                                     />
-                                    <Area type="monotone" dataKey="close" stroke="#a855f7" strokeWidth={2} fillOpacity={1} fill="url(#colorClose)" />
-                                </AreaChart>
+                                    <Legend />
+                                    
+                                    {/* Primary Close Price */}
+                                    <Area 
+                                        type="monotone" 
+                                        dataKey="close" 
+                                        name="Price"
+                                        stroke="#a855f7" 
+                                        strokeWidth={2} 
+                                        fillOpacity={1} 
+                                        fill="url(#colorClose)" 
+                                    />
+
+                                    {/* Bid/Ask Spread Visualization for HFT */}
+                                    {isIntradayView && (
+                                        <>
+                                            <Line type="monotone" dataKey="bid" stroke="#10b981" strokeWidth={1} dot={false} strokeOpacity={0.5} name="Bid" />
+                                            <Line type="monotone" dataKey="ask" stroke="#ef4444" strokeWidth={1} dot={false} strokeOpacity={0.5} name="Ask" />
+                                        </>
+                                    )}
+                                </ComposedChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
