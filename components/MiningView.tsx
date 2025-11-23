@@ -21,7 +21,6 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor }) => {
     }
     
     // Prevent XSS/Script injection attempts
-    // Checks for <script>, javascript: protocol, and common event handlers
     const dangerousPatterns = /<script\b[^>]*>|javascript:|on\w+=/i;
     if (dangerousPatterns.test(input)) {
       setError("Input contains potentially unsafe content.");
@@ -45,7 +44,6 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor }) => {
     setResult(null);
     
     try {
-      // Sanitize input by removing potential HTML tag brackets before sending to API
       const sanitizedPrompt = prompt.replace(/[<>]/g, '');
       const data = await generateFactorSuggestion(sanitizedPrompt, frequency);
       setResult(data);
@@ -75,26 +73,25 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor }) => {
       }
     };
     onAddFactor(newFactor);
-    // Reset after save
     setResult(null);
     setPrompt('');
     setError(null);
   };
 
   return (
-    <div className="h-full flex flex-col gap-6 p-8 max-w-6xl mx-auto">
+    <div className="h-full flex flex-col gap-6 p-4 md:p-8 max-w-6xl mx-auto pb-20 md:pb-8">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+        <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
           <BrainCircuit className="text-purple-500" size={32} />
           AI Factor Mining
         </h1>
-        <p className="text-slate-400">Describe a market hypothesis, and the AI will formalize it into a mathematical factor.</p>
+        <p className="text-slate-400 text-sm md:text-base">Describe a market hypothesis, and the AI will formalize it into a mathematical factor.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 h-full">
         {/* Input Section */}
         <div className="col-span-1 flex flex-col gap-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl flex flex-col gap-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-6 shadow-xl flex flex-col gap-4">
             <div>
               <label className="text-sm font-semibold text-slate-300 mb-2 block">Data Frequency</label>
               <div className="flex p-1 bg-slate-950 rounded-lg border border-slate-800">
@@ -122,7 +119,7 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor }) => {
                     if (error) setError(null);
                 }}
                 placeholder="e.g. Find stocks with high volume but low price movement, suggesting accumulation..."
-                className={`w-full h-40 bg-slate-950 border rounded-lg p-4 text-slate-200 focus:outline-none focus:ring-2 placeholder:text-slate-600 resize-none text-sm font-sans ${
+                className={`w-full h-32 md:h-40 bg-slate-950 border rounded-lg p-4 text-slate-200 focus:outline-none focus:ring-2 placeholder:text-slate-600 resize-none text-sm font-sans ${
                     error 
                     ? 'border-red-500/50 focus:ring-red-500/50' 
                     : 'border-slate-800 focus:ring-blue-500/50'
@@ -146,7 +143,7 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor }) => {
             </button>
           </div>
 
-          <div className="bg-slate-900/50 border border-slate-800/50 rounded-xl p-6">
+          <div className="bg-slate-900/50 border border-slate-800/50 rounded-xl p-4 md:p-6 hidden md:block">
             <h3 className="text-sm font-semibold text-slate-400 mb-3">Example Prompts</h3>
             <ul className="space-y-3 text-sm text-slate-500">
               <li className="cursor-pointer hover:text-blue-400 transition-colors" onClick={() => { setPrompt("Reversal strategy based on RSI divergence over 14 days."); setError(null); }}>
@@ -165,8 +162,8 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor }) => {
         {/* Output Section */}
         <div className="col-span-1 lg:col-span-2">
           {result ? (
-            <div className="h-full bg-slate-900 border border-slate-800 rounded-xl p-8 shadow-xl flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="flex justify-between items-start">
+            <div className="h-full bg-slate-900 border border-slate-800 rounded-xl p-6 md:p-8 shadow-xl flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                 <div>
                   <span className="inline-block px-2 py-1 bg-purple-500/10 text-purple-400 text-xs font-bold rounded mb-2 border border-purple-500/20 uppercase tracking-wider">
                     {result.category}
@@ -176,7 +173,7 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor }) => {
                 </div>
                 <button 
                     onClick={handleSave}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors w-full sm:w-auto justify-center"
                 >
                     <Save size={16} />
                     Save to Library
@@ -197,17 +194,17 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor }) => {
 
               <div className="flex-1 bg-slate-900/50 rounded-lg p-6 border border-slate-800/50">
                  <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-3">Alpha Logic</h3>
-                 <p className="text-slate-300 leading-relaxed">
+                 <p className="text-slate-300 leading-relaxed text-sm md:text-base">
                     {result.logic_explanation}
                  </p>
               </div>
             </div>
           ) : (
-            <div className="h-full bg-slate-900/30 border-2 border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-600 gap-4">
+            <div className="min-h-[300px] h-full bg-slate-900/30 border-2 border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-600 gap-4 p-8">
               <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center">
                  <ArrowRight size={24} className="text-slate-600" />
               </div>
-              <p>Generated factors will appear here...</p>
+              <p className="text-center">Generated factors will appear here...</p>
             </div>
           )}
         </div>

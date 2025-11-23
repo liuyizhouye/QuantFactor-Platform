@@ -82,16 +82,16 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddFactor 
   };
 
   return (
-    <div className="h-full flex flex-col p-8 max-w-7xl mx-auto gap-6 overflow-y-auto">
+    <div className="h-full flex flex-col p-4 md:p-8 max-w-7xl mx-auto gap-6 overflow-y-auto pb-20 md:pb-8">
       <div>
-        <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+        <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
           <FlaskConical className="text-pink-500" size={32} />
           Factor Lab
         </h1>
-        <p className="text-slate-400">Combine existing alpha signals and apply risk controls.</p>
+        <p className="text-slate-400 text-sm md:text-base">Combine existing alpha signals and apply risk controls.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 h-full min-h-0">
         
         {/* Left Panel: Factor Selection */}
         <div className="lg:col-span-4 flex flex-col gap-4 min-h-0">
@@ -101,7 +101,7 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddFactor 
                 <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-400">{selectedIds.size} selected</span>
             </h3>
             
-            <div className="flex-1 overflow-y-auto pr-2 space-y-2 max-h-[600px]">
+            <div className="flex-1 overflow-y-auto pr-2 space-y-2 max-h-[300px] lg:max-h-[600px]">
                 {factors.length === 0 ? (
                     <div className="text-center py-10 text-slate-500 text-sm">
                         No factors in library. Go to Mining to create some first.
@@ -237,7 +237,7 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddFactor 
             <div className="flex-1 min-h-[300px]">
                 {result ? (
                     <div className="h-full bg-slate-900 border border-slate-800 rounded-xl p-8 shadow-xl flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="flex justify-between items-start">
+                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                             <div>
                                 <div className="flex gap-2 mb-2">
                                      <span className="inline-block px-2 py-1 bg-pink-500/10 text-pink-400 text-xs font-bold rounded border border-pink-500/20 uppercase tracking-wider">
@@ -254,7 +254,7 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddFactor 
                             </div>
                             <button 
                                 onClick={handleSave}
-                                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors"
+                                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors w-full sm:w-auto justify-center"
                             >
                                 <Save size={16} />
                                 Save Composite
@@ -275,17 +275,17 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddFactor 
 
                         <div className="flex-1 bg-slate-900/50 rounded-lg p-6 border border-slate-800/50">
                             <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-3">Synthesis & Risk Logic</h3>
-                            <p className="text-slate-300 leading-relaxed">
+                            <p className="text-slate-300 leading-relaxed text-sm md:text-base">
                                 {result.logic_explanation}
                             </p>
                         </div>
                     </div>
                 ) : (
-                    <div className="h-full bg-slate-900/30 border-2 border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-600 gap-4">
+                    <div className="h-full bg-slate-900/30 border-2 border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-600 gap-4 p-8">
                         <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center">
                             <ArrowRight size={24} className="text-slate-600" />
                         </div>
-                        <p>Select factors, configure risk settings, and click Synthesize.</p>
+                        <p className="text-center">Select factors, configure risk settings, and click Synthesize.</p>
                     </div>
                 )}
             </div>

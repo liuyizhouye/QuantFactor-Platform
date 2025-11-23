@@ -19,14 +19,14 @@ const Dashboard: React.FC<DashboardProps> = ({ factors }) => {
   const chartData = Object.keys(categories).map(k => ({ name: k, count: categories[k] }));
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 pb-20 md:pb-8">
         <div>
             <h1 className="text-2xl font-bold text-white">Market Overview</h1>
-            <p className="text-slate-400">System status and factor library statistics</p>
+            <p className="text-slate-400 text-sm md:text-base">System status and factor library statistics</p>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-lg">
                 <div className="flex justify-between items-start mb-4">
                     <div className="p-2 bg-blue-500/10 rounded-lg">
@@ -77,7 +77,7 @@ const Dashboard: React.FC<DashboardProps> = ({ factors }) => {
                 <div className="h-64 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={chartData}>
-                            <XAxis dataKey="name" stroke="#64748b" tick={{fontSize: 10}} />
+                            <XAxis dataKey="name" stroke="#64748b" tick={{fontSize: 10}} interval={0} angle={-15} textAnchor="end" height={60} />
                             <YAxis stroke="#64748b" />
                             <Tooltip 
                                 cursor={{fill: '#1e293b'}}
@@ -98,12 +98,12 @@ const Dashboard: React.FC<DashboardProps> = ({ factors }) => {
                                 <div className="w-8 h-8 rounded bg-slate-800 flex items-center justify-center text-xs font-mono font-bold text-slate-400">
                                     F{i}
                                 </div>
-                                <div>
-                                    <p className="text-sm font-medium text-slate-200">System Backtest Completed</p>
-                                    <p className="text-xs text-slate-500">Factor ID: alpha_momentum_v{i}</p>
+                                <div className="min-w-0">
+                                    <p className="text-sm font-medium text-slate-200 truncate">System Backtest Completed</p>
+                                    <p className="text-xs text-slate-500 truncate">Factor ID: alpha_momentum_v{i}</p>
                                 </div>
                             </div>
-                            <div className="text-right">
+                            <div className="text-right shrink-0">
                                 <span className="text-xs font-mono text-emerald-400">SR: 1.{8+i}</span>
                                 <p className="text-[10px] text-slate-600">2h ago</p>
                             </div>
