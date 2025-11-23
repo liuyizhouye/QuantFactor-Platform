@@ -18,7 +18,7 @@ const BacktestView: React.FC<BacktestViewProps> = ({ factors, targetFrequency })
   const [progress, setProgress] = useState(0);
   const [analysis, setAnalysis] = useState<string>("");
   
-  const progressInterval = useRef<NodeJS.Timeout | null>(null);
+  const progressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const isHighFreq = targetFrequency === FactorFrequency.HIGH_FREQ;
 
   // Filter valid factors for this view

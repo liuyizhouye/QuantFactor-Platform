@@ -1,8 +1,8 @@
-
 import React, { useState } from 'react';
 import { generateFactorSuggestion } from '../services/geminiService';
 import { FactorFrequency, Factor, FactorCategory } from '../types';
-import { Sparkles, ArrowRight, Save, Copy, Loader2, Code2, BrainCircuit, AlertCircle, Zap, Pickaxe } from 'lucide-react';
+import { Sparkles, ArrowRight, Save, Copy, Loader2, Code2, BrainCircuit, AlertCircle, Zap, Pickaxe, Database, Info } from 'lucide-react';
+import { useNotification } from '../App';
 
 interface MiningViewProps {
   onAddFactor: (factor: Factor) => void;
@@ -14,12 +14,30 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor, targetFrequency })
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{name: string, formula: string, description: string, category: string, logic_explanation: string} | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showDictionary, setShowDictionary] = useState(true);
 
+  const notify = useNotification();
   const isHighFreq = targetFrequency === FactorFrequency.HIGH_FREQ;
+
+  // --- DATA DICTIONARY DEFINITION ---
+  const LF_COLUMNS = [
+      { category: 'Market Data', fields: ['open', 'high', 'low', 'close', 'volume', 'vwap', 'turnover'] },
+      { category: 'Fundamentals (Quarterly)', fields: ['pe_ttm', 'pb_ratio', 'roe_ttm', 'net_income_growth', 'debt_to_equity', 'gross_margin'] },
+      { category: 'Analyst Estimates', fields: ['eps_surprise', 'rating_avg', 'target_price'] },
+  ];
+
+  const HF_COLUMNS = [
+      { category: 'Tick/Bar Data', fields: ['close', 'volume', 'vwap', 'timestamp_ms'] },
+      { category: 'Order Book (L2)', fields: ['bid_price_1', 'ask_price_1', 'bid_size_1', 'ask_size_1', 'spread_bps'] },
+      { category: 'Order Flow', fields: ['buy_volume', 'sell_volume', 'trade_count'] },
+  ];
+
+  const currentColumns = isHighFreq ? HF_COLUMNS : LF_COLUMNS;
 
   const validateInput = (input: string): boolean => {
     if (!input.trim()) {
       setError("Please enter a research hypothesis.");
+      notify('error', "Please enter a research hypothesis.");
       return false;
     }
     
@@ -27,11 +45,13 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor, targetFrequency })
     const dangerousPatterns = /<script\b[^>]*>|javascript:|on\w+=/i;
     if (dangerousPatterns.test(input)) {
       setError("Input contains potentially unsafe content.");
+      notify('error', "Input detected as potentially unsafe.");
       return false;
     }
     
     if (input.length > 5000) {
       setError("Prompt is too long (max 5000 characters).");
+      notify('error', "Prompt is too long.");
       return false;
     }
 
@@ -53,6 +73,7 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor, targetFrequency })
     } catch (error) {
       console.error("Failed to mine factor", error);
       setError("Failed to generate factor analysis. Please try again.");
+      notify('error', "Failed to generate factor. Check API connection.");
     } finally {
       setLoading(false);
     }
@@ -76,13 +97,18 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor, targetFrequency })
       }
     };
     onAddFactor(newFactor);
+    notify('success', `Saved factor: ${result.name}`);
     setResult(null);
     setPrompt('');
     setError(null);
   };
 
+  const insertField = (field: string) => {
+      setPrompt(prev => prev + ` using ${field} `);
+  };
+
   return (
-    <div className="h-full overflow-y-auto flex flex-col gap-6 p-4 md:p-8 max-w-6xl mx-auto pb-20 md:pb-8">
+    <div className="h-full overflow-y-auto flex flex-col gap-6 p-4 md:p-8 max-w-7xl mx-auto pb-20 md:pb-8">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
           {isHighFreq ? <Zap className="text-orange-500" size={32} /> : <Pickaxe className="text-blue-500" size={32} />}
@@ -95,16 +121,17 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor, targetFrequency })
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 min-h-0">
+        
         {/* Input Section */}
-        <div className="col-span-1 flex flex-col gap-4">
+        <div className="lg:col-span-8 flex flex-col gap-4 order-2 lg:order-1">
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-6 shadow-xl flex flex-col gap-4">
             
             {/* Status Indicator */}
             <div className="flex items-center gap-2 p-3 bg-slate-950 rounded-lg border border-slate-800">
                <div className={`w-2 h-2 rounded-full ${isHighFreq ? 'bg-orange-500 animate-pulse' : 'bg-blue-500'}`}></div>
                <span className="text-xs font-mono text-slate-400 uppercase">
-                  Mode: <span className="text-slate-200 font-bold">{isHighFreq ? 'Intraday (Microstructure)' : 'Daily (Interday)'}</span>
+                  Mode: <span className="text-slate-200 font-bold">{isHighFreq ? 'Intraday (Microstructure)' : 'Daily (Fundamentals/Price)'}</span>
                </span>
             </div>
 
@@ -117,8 +144,8 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor, targetFrequency })
                     if (error) setError(null);
                 }}
                 placeholder={isHighFreq 
-                    ? "e.g. Detect order book imbalance spikes 500ms before price jumps..." 
-                    : "e.g. Find stocks with decreasing volume on down days (accumulation)..."}
+                    ? "e.g. Detect order book imbalance spikes in 'bid_size_1' vs 'ask_size_1'..." 
+                    : "e.g. Rank stocks by 'roe_ttm' and filter for low 'pe_ttm'..."}
                 className={`w-full h-32 md:h-40 bg-slate-950 border rounded-lg p-4 text-slate-200 focus:outline-none focus:ring-2 placeholder:text-slate-600 resize-none text-sm font-sans ${
                     error 
                     ? 'border-red-500/50 focus:ring-red-500/50' 
@@ -147,28 +174,7 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor, targetFrequency })
             </button>
           </div>
 
-          <div className="bg-slate-900/50 border border-slate-800/50 rounded-xl p-4 md:p-6 hidden md:block">
-            <h3 className="text-sm font-semibold text-slate-400 mb-3">Example Prompts</h3>
-            <ul className="space-y-3 text-sm text-slate-500">
-              {isHighFreq ? (
-                <>
-                  <li className="cursor-pointer hover:text-orange-400 transition-colors" onClick={() => setPrompt("Order book imbalance delta predicting next tick direction.")}>• Order Flow Imbalance</li>
-                  <li className="cursor-pointer hover:text-orange-400 transition-colors" onClick={() => setPrompt("Volume Weighted Average Price (VWAP) reversion on 1-min bars.")}>• VWAP Mean Reversion</li>
-                  <li className="cursor-pointer hover:text-orange-400 transition-colors" onClick={() => setPrompt("Bid-Ask spread expansion during high volatility events.")}>• Spread Arbitrage</li>
-                </>
-              ) : (
-                 <>
-                  <li className="cursor-pointer hover:text-blue-400 transition-colors" onClick={() => setPrompt("Reversal strategy based on RSI divergence over 14 days.")}>• RSI divergence reversal</li>
-                  <li className="cursor-pointer hover:text-blue-400 transition-colors" onClick={() => setPrompt("Stocks near 52-week high with decreasing volatility.")}>• Low Volatility Breakout</li>
-                  <li className="cursor-pointer hover:text-blue-400 transition-colors" onClick={() => setPrompt("High momentum coupled with fundamental value growth.")}>• Growth at Reasonable Price</li>
-                </>
-              )}
-            </ul>
-          </div>
-        </div>
-
-        {/* Output Section */}
-        <div className="col-span-1 lg:col-span-2">
+          {/* Results Area */}
           {result ? (
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 md:p-8 shadow-xl flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
@@ -201,14 +207,14 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor, targetFrequency })
               </div>
 
               <div className="flex-1 bg-slate-900/50 rounded-lg p-6 border border-slate-800/50">
-                 <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-3">Alpha Logic</h3>
+                 <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-3">Alpha Logic & Data Usage</h3>
                  <p className="text-slate-300 leading-relaxed text-sm md:text-base">
                     {result.logic_explanation}
                  </p>
               </div>
             </div>
           ) : (
-            <div className="min-h-[300px] h-full bg-slate-900/30 border-2 border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-600 gap-4 p-8">
+            <div className="min-h-[200px] h-full bg-slate-900/30 border-2 border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-600 gap-4 p-8">
               <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center">
                  <ArrowRight size={24} className="text-slate-600" />
               </div>
@@ -216,6 +222,52 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor, targetFrequency })
             </div>
           )}
         </div>
+
+        {/* Right Panel: Data Dictionary */}
+        <div className="lg:col-span-4 order-1 lg:order-2">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg sticky top-6">
+                 <div className="p-4 border-b border-slate-800 bg-slate-950/50 flex items-center justify-between">
+                    <h3 className="font-bold text-slate-200 flex items-center gap-2">
+                        <Database size={16} className="text-purple-500" /> Data Dictionary
+                    </h3>
+                    <div className="text-[10px] text-slate-500 bg-slate-900 px-2 py-1 rounded border border-slate-800">
+                        {isHighFreq ? 'TickDB' : 'FundamentalsDB'}
+                    </div>
+                </div>
+                
+                <div className="p-4 bg-blue-900/10 border-b border-blue-900/20">
+                     <div className="flex gap-2">
+                        <Info size={16} className="text-blue-400 shrink-0 mt-0.5" />
+                        <p className="text-xs text-blue-200 leading-relaxed">
+                            These are the valid fields available in our database. The AI will strictly use these columns to ensure the code is executable.
+                        </p>
+                     </div>
+                </div>
+
+                <div className="p-2 overflow-y-auto max-h-[500px] space-y-4">
+                    {currentColumns.map((group, idx) => (
+                        <div key={idx} className="bg-slate-950/50 rounded-lg p-3 border border-slate-800/50">
+                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 border-b border-slate-800 pb-1">
+                                {group.category}
+                            </h4>
+                            <div className="flex flex-wrap gap-2">
+                                {group.fields.map(field => (
+                                    <button 
+                                        key={field}
+                                        onClick={() => insertField(field)}
+                                        className="px-2 py-1 text-xs font-mono rounded bg-slate-900 border border-slate-700 text-slate-300 hover:border-purple-500 hover:text-purple-400 transition-colors text-left"
+                                        title="Click to insert into prompt"
+                                    >
+                                        {field}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+
       </div>
     </div>
   );

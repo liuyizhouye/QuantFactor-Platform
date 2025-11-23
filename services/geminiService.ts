@@ -4,6 +4,45 @@ import { FactorFrequency, FactorCategory, Factor } from "../types";
 const apiKey = process.env.API_KEY || '';
 const ai = new GoogleGenAI({ apiKey });
 
+// --- DATA DICTIONARY CONTEXT ---
+// This ensures the AI uses ACTUAL database columns, not hallucinated ones.
+const LOW_FREQ_SCHEMA = `
+AVAILABLE DATA COLUMNS (Low Frequency / Daily):
+1. Market Data (df_price):
+   - open, high, low, close, volume, vwap, turnover_value
+2. Fundamental Data (df_fundamental):
+   - pe_ttm (Price to Earnings Trailing 12M)
+   - pb_ratio (Price to Book)
+   - ps_ratio (Price to Sales)
+   - roe_ttm (Return on Equity)
+   - roa_ttm (Return on Assets)
+   - debt_to_equity (Total Debt / Total Equity)
+   - free_cash_flow_yield (FCF / Market Cap)
+   - gross_margin (Gross Profit / Revenue)
+   - revenue_growth_yoy (Year over Year Revenue Growth)
+   - eps_growth_yoy (Year over Year EPS Growth)
+3. Estimates/Analyst (df_estimates):
+   - eps_surprise (Actual EPS - Estimated EPS)
+   - rating_avg (1=Buy, 5=Sell)
+`;
+
+const HIGH_FREQ_SCHEMA = `
+AVAILABLE DATA COLUMNS (High Frequency / Intraday):
+1. Tick/Bar Data (df_1min):
+   - open, high, low, close, volume, vwap
+   - timestamp (Unix ms)
+2. Order Book / L1 (df_l1):
+   - bid_price_1, ask_price_1
+   - bid_size_1, ask_size_1
+   - bid_price_2, ask_price_2 (and so on up to level 5)
+   - spread_bps (Ask - Bid in basis points)
+   - mid_price
+3. Trade Flow (df_trades):
+   - buy_volume (Aggressive Buy Volume)
+   - sell_volume (Aggressive Sell Volume)
+   - trade_count (Number of trades in bar)
+`;
+
 export const generateFactorSuggestion = async (
   prompt: string, 
   frequency: FactorFrequency
@@ -14,13 +53,20 @@ export const generateFactorSuggestion = async (
   }
 
   const modelId = 'gemini-2.5-flash';
+  const isHighFreq = frequency === FactorFrequency.HIGH_FREQ;
+  const schemaContext = isHighFreq ? HIGH_FREQ_SCHEMA : LOW_FREQ_SCHEMA;
   
   const systemInstruction = `
-    You are a world-class Quantitative Researcher specializing in Alpha Factor Mining for financial markets.
-    Your goal is to suggest concrete, mathematically sound alpha factors based on user descriptions.
+    You are a world-class Quantitative Researcher.
+    Your goal is to write EXECUTABLE Python pandas code for alpha factors.
     
-    If the user asks for high-frequency, focus on microstructure, order book imbalance, and tick-level patterns.
-    If the user asks for low-frequency, focus on daily price action, volume, or fundamental ratios.
+    CRITICAL RULE:
+    You must ONLY use the data columns provided in the "AVAILABLE DATA COLUMNS" list below. 
+    Do NOT invent columns like 'df.sentiment' or 'df.my_ratio' if they are not in the list.
+    If a ratio needs to be calculated (e.g., Price/Sales) and the direct column isn't there, calculate it using base columns (e.g. close / revenue_per_share).
+    However, if 'ps_ratio' IS provided, use it directly.
+
+    ${schemaContext}
     
     Output strictly in JSON format.
   `;
@@ -29,13 +75,14 @@ export const generateFactorSuggestion = async (
     Context: The user wants a ${frequency} factor.
     User Idea/Hypothesis: "${prompt}"
     
-    Please generate a quantitative factor.
+    Please generate a quantitative factor using the schema provided.
+    
     Return a JSON object with:
-    - name: A professional name for the factor.
+    - name: A professional name.
     - category: One of [Momentum, Volatility, Liquidity, Mean Reversion, Sentiment, Fundamental].
     - description: A concise 1-sentence description.
-    - formula: Python/Pandas pseudocode snippet representing the calculation (e.g., 'df.close.pct_change(5).rank()').
-    - logic_explanation: A short paragraph explaining why this factor might generate alpha.
+    - formula: Python pandas code assuming 'df' contains the columns listed in the schema. (e.g. 'df.pe_ttm.rank() * df.momentum').
+    - logic_explanation: Explain exactly which database fields are used and why.
   `;
 
   try {

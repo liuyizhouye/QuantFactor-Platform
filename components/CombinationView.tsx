@@ -33,7 +33,7 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddPortfol
   const [formulaResult, setFormulaResult] = useState<{name: string, formula: string, description: string, category: string, logic_explanation: string} | null>(null);
   const [backtestResult, setBacktestResult] = useState<BacktestResult | null>(null);
 
-  const progressInterval = useRef<NodeJS.Timeout | null>(null);
+  const progressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const isHighFreq = targetFrequency === FactorFrequency.HIGH_FREQ;
 
   // Filter factors for current mode
