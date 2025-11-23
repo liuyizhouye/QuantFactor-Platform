@@ -16,6 +16,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, onCl
       title: "Overview",
       items: [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { id: 'portfolio-lib', label: 'Portfolio Library', icon: Briefcase },
         { id: 'settings', label: 'Settings', icon: Settings },
       ]
     },
@@ -24,7 +25,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, onCl
       items: [
          { id: 'data-market', label: 'Market Data', icon: TrendingUp },
          { id: 'data-fund', label: 'Fundamental Data', icon: FileText },
-         { id: 'data-alt', label: 'Alternative Data', icon: Share2 },
       ]
     },
     {
@@ -43,12 +43,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, onCl
         { id: 'library-hf', label: 'HFT Library', icon: Activity },
         { id: 'portfolio-hf', label: 'HFT Portfolio', icon: FlaskConical },
         { id: 'backtest-hf', label: 'HFT Microstructure', icon: LineChart },
-      ]
-    },
-    {
-      title: "Portfolio Management",
-      items: [
-        { id: 'portfolio-lib', label: 'Portfolio Library', icon: Briefcase },
       ]
     }
   ];

@@ -185,7 +185,6 @@ const App: React.FC = () => {
   const getDataCategory = (tabId: string): DataCategory => {
       switch(tabId) {
           case 'data-fund': return 'FUNDAMENTAL';
-          case 'data-alt': return 'ALTERNATIVE';
           default: return 'MARKET';
       }
   };

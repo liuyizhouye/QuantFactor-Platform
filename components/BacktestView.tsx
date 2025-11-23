@@ -155,7 +155,29 @@ const BacktestView: React.FC<BacktestViewProps> = ({ factors, targetFrequency })
                         
                         <div>
                              <label className="block text-xs font-medium text-slate-500 mb-1">Holding Period</label>
-                             <input type="text" className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-sm rounded-lg p-2.5" placeholder="e.g. 5 Days" defaultValue={isHighFreq ? "1 Minute" : "1 Day"} />
+                             <select 
+                                className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-sm rounded-lg p-2.5 focus:border-blue-500 focus:outline-none"
+                                defaultValue={isHighFreq ? "1 Minute" : "1 Day"}
+                             >
+                                {isHighFreq ? (
+                                    <>
+                                        <option value="1 Minute">1 Minute</option>
+                                        <option value="5 Minutes">5 Minutes</option>
+                                        <option value="15 Minutes">15 Minutes</option>
+                                        <option value="30 Minutes">30 Minutes</option>
+                                        <option value="End of Day">End of Day</option>
+                                    </>
+                                ) : (
+                                    <>
+                                        <option value="1 Day">1 Day</option>
+                                        <option value="3 Days">3 Days</option>
+                                        <option value="5 Days">5 Days (Weekly)</option>
+                                        <option value="10 Days">10 Days</option>
+                                        <option value="21 Days">21 Days (Monthly)</option>
+                                        <option value="63 Days">63 Days (Quarterly)</option>
+                                    </>
+                                )}
+                             </select>
                         </div>
 
                         <div className="pt-2">

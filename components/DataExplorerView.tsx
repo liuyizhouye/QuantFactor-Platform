@@ -5,14 +5,14 @@ import { ResponsiveContainer, ComposedChart, Line, Area, BarChart, Bar, XAxis, Y
 
 // --- Types ---
 
-export type DataCategory = 'MARKET' | 'FUNDAMENTAL' | 'ALTERNATIVE';
+export type DataCategory = 'MARKET' | 'FUNDAMENTAL';
 
 interface Dataset {
   id: string;
   symbol: string;
   name: string;
   category: DataCategory;
-  subType: 'Daily' | 'Intraday (1m)' | 'Tick (L2)' | 'Macro';
+  subType: 'Daily' | 'Intraday (1m)' | 'Tick (L2)';
   rows: number;
 }
 
@@ -22,14 +22,11 @@ interface DataExplorerViewProps {
 
 type DataRow = Record<string, any>;
 
-// --- Mock Datasets Config (Market/Alternative) ---
+// --- Mock Datasets Config (Market) ---
 const OTHER_DATASETS: Dataset[] = [
   { id: 'm1', symbol: 'AAPL', name: 'Apple Inc. (OHLC)', category: 'MARKET', subType: 'Daily', rows: 2500 },
   { id: 'm2', symbol: 'NVDA_1MIN', name: 'NVIDIA (1m OrderBook)', category: 'MARKET', subType: 'Intraday (1m)', rows: 39000 },
   { id: 'm3', symbol: 'ES_FUT', name: 'E-Mini S&P 500 (L2)', category: 'MARKET', subType: 'Tick (L2)', rows: 1500000 },
-  { id: 'macro_cpi', symbol: 'US_CPI_YOY', name: 'US CPI (YoY Inflation)', category: 'ALTERNATIVE', subType: 'Macro', rows: 240 },
-  { id: 'macro_gdp', symbol: 'US_GDP_QOQ', name: 'US Real GDP Growth', category: 'ALTERNATIVE', subType: 'Macro', rows: 100 },
-  { id: 'macro_rates', symbol: 'FED_FUNDS', name: 'Effective Fed Funds Rate', category: 'ALTERNATIVE', subType: 'Macro', rows: 5000 },
 ];
 
 const FUND_METRICS = [
@@ -115,25 +112,6 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
         }
         generated.push(row);
         price = close;
-    }
-    return generated;
-  };
-
-  const generateMacroData = (dataset: Dataset) => {
-    const generated: DataRow[] = [];
-    const rows = 120; 
-    const now = new Date();
-    let val = dataset.id === 'macro_rates' ? 5.25 : 2.0;
-
-    for (let i = 0; i < rows; i++) {
-        const d = new Date(now);
-        d.setMonth(d.getMonth() - (rows - i));
-        val += (Math.random() - 0.5) * 0.1;
-        if (val < 0) val = 0;
-        generated.push({
-            timestamp: d.toISOString().split('T')[0],
-            value: Number(val.toFixed(2))
-        });
     }
     return generated;
   };
@@ -254,11 +232,7 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
                   setData(generateSingleStockData(selectedTicker));
               }
           } else if (selectedDataset) {
-              if (selectedDataset.category === 'ALTERNATIVE') {
-                  setData(generateMacroData(selectedDataset));
-              } else {
-                  setData(generateMarketData(selectedDataset));
-              }
+              setData(generateMarketData(selectedDataset));
           }
           setLoading(false);
       }, 300);
@@ -345,7 +319,7 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
           );
       }
 
-      // Default Sidebar for Market/Alternative
+      // Default Sidebar for Market
       return (
         <div className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col min-h-0 shrink-0">
             <div className="p-4 border-b border-slate-800 bg-slate-950/30">
@@ -572,7 +546,7 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
           }
       }
 
-      // Default Chart/Table View for Market/Macro
+      // Default Chart/Table View for Market
       return (
           <div className="h-full p-6 flex flex-col gap-6">
              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg h-[400px]">
@@ -583,7 +557,7 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
                            <YAxis domain={['auto', 'auto']} stroke="#64748b" tick={{fontSize: 10}} />
                            <Tooltip contentStyle={{backgroundColor: '#0f172a', borderColor: '#334155'}} />
                            <Legend />
-                           <Area type="monotone" dataKey={targetCategory === 'ALTERNATIVE' ? 'value' : 'close'} stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.1} name={targetCategory === 'ALTERNATIVE' ? 'Value' : 'Price'} />
+                           <Area type="monotone" dataKey={'close'} stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.1} name={'Price'} />
                            {data.length > 0 && 'bid' in data[0] && <Line type="monotone" dataKey="bid" stroke="#10b981" dot={false} strokeWidth={1} />}
                            {data.length > 0 && 'ask' in data[0] && <Line type="monotone" dataKey="ask" stroke="#ef4444" dot={false} strokeWidth={1} />}
                       </ComposedChart>
@@ -623,7 +597,6 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
         <h1 className="text-2xl font-bold text-white flex items-center gap-3">
           {targetCategory === 'MARKET' && <TrendingUp className="text-purple-500" size={32} />}
           {targetCategory === 'FUNDAMENTAL' && <FileText className="text-blue-500" size={32} />}
-          {targetCategory === 'ALTERNATIVE' && <Globe className="text-emerald-500" size={32} />}
           
           {targetCategory === 'FUNDAMENTAL' ? 'Fundamental Analytics' : selectedDataset?.name || 'Data Explorer'}
         </h1>
