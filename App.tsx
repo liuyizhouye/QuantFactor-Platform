@@ -7,7 +7,6 @@ import BacktestView from './components/BacktestView';
 import LibraryView from './components/LibraryView';
 import CombinationView from './components/CombinationView';
 import PortfolioLibraryView from './components/PortfolioLibraryView';
-import ConsoleView from './components/ConsoleView';
 import SettingsView from './components/SettingsView';
 import DataExplorerView, { DataCategory } from './components/DataExplorerView';
 import { Factor, FactorCategory, FactorFrequency, Portfolio } from './types';
@@ -245,11 +244,6 @@ const App: React.FC = () => {
                 </div>
                 
                 {/* --- DATA EXPLORER MODULES --- */}
-                {/* We render a single instance or multiple depending on if we want to persist state. 
-                    Here we use Keep-Alive style by rendering one generic view that adapts to props, 
-                    BUT since the prompt implies separate 'modules', using the 'startsWith' check lets us 
-                    route all data-* tabs to this view. 
-                */}
                 <div className={`h-full z-10 relative ${activeTab.startsWith('data-') ? 'block' : 'hidden'}`}>
                     <DataExplorerView targetCategory={getDataCategory(activeTab)} />
                 </div>
@@ -286,10 +280,6 @@ const App: React.FC = () => {
                 {/* Shared Library & System */}
                 <div className={`h-full z-10 relative ${activeTab === 'portfolio-lib' ? 'block' : 'hidden'}`}>
                     <PortfolioLibraryView portfolios={portfolios} onDelete={handleDeletePortfolio} factors={factors} />
-                </div>
-
-                <div className={`h-full z-10 relative ${activeTab === 'console' ? 'block' : 'hidden'}`}>
-                    <ConsoleView />
                 </div>
 
                 <div className={`h-full z-10 relative ${activeTab === 'settings' ? 'block' : 'hidden'}`}>

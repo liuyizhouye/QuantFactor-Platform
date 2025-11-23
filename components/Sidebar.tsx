@@ -16,7 +16,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, onCl
       title: "Overview",
       items: [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'console', label: 'Python Console', icon: Terminal },
         { id: 'settings', label: 'Settings', icon: Settings },
       ]
     },

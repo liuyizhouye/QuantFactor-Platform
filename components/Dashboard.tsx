@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { Factor } from '../types';
+import { Factor, FactorFrequency } from '../types';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
-import { TrendingUp, Users, Database, Server, Clock } from 'lucide-react';
+import { TrendingUp, Users, Database, Server, Clock, Zap, BookOpen, Activity } from 'lucide-react';
 
 interface DashboardProps {
     factors: Factor[];
@@ -11,7 +11,9 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ factors }) => {
   // Aggregate stats
   const totalFactors = factors.length;
-  const highFreq = factors.filter(f => f.frequency.includes('High')).length;
+  const highFreqCount = factors.filter(f => f.frequency === FactorFrequency.HIGH_FREQ).length;
+  const lowFreqCount = factors.filter(f => f.frequency === FactorFrequency.LOW_FREQ).length;
+  
   const categories = factors.reduce((acc, f) => {
     acc[f.category] = (acc[f.category] || 0) + 1;
     return acc;
@@ -31,28 +33,29 @@ const Dashboard: React.FC<DashboardProps> = ({ factors }) => {
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-lg">
                 <div className="flex justify-between items-start mb-4">
                     <div className="p-2 bg-blue-500/10 rounded-lg">
-                        <Database className="text-blue-500" size={24} />
+                        <BookOpen className="text-blue-500" size={24} />
                     </div>
-                    <span className="text-xs font-medium text-slate-500 bg-slate-950 px-2 py-1 rounded">Live</span>
+                    <span className="text-xs font-medium text-slate-500 bg-slate-950 px-2 py-1 rounded">Daily</span>
                 </div>
-                <h3 className="text-3xl font-bold text-white">{totalFactors}</h3>
-                <p className="text-sm text-slate-400">Total Factors in Library</p>
+                <h3 className="text-3xl font-bold text-white">{lowFreqCount}</h3>
+                <p className="text-sm text-slate-400">Alpha Strategies</p>
             </div>
 
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-lg">
                 <div className="flex justify-between items-start mb-4">
-                    <div className="p-2 bg-purple-500/10 rounded-lg">
-                        <Clock className="text-purple-500" size={24} />
+                    <div className="p-2 bg-orange-500/10 rounded-lg">
+                        <Zap className="text-orange-500" size={24} />
                     </div>
+                    <span className="text-xs font-medium text-slate-500 bg-slate-950 px-2 py-1 rounded">Intraday</span>
                 </div>
-                <h3 className="text-3xl font-bold text-white">{highFreq}</h3>
-                <p className="text-sm text-slate-400">High-Frequency Strategies</p>
+                <h3 className="text-3xl font-bold text-white">{highFreqCount}</h3>
+                <p className="text-sm text-slate-400">HFT Algos</p>
             </div>
 
              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-lg">
                 <div className="flex justify-between items-start mb-4">
                     <div className="p-2 bg-emerald-500/10 rounded-lg">
-                        <Server className="text-emerald-500" size={24} />
+                        <Activity className="text-emerald-500" size={24} />
                     </div>
                     <span className="text-xs font-medium text-emerald-500">+12% vs yest</span>
                 </div>
@@ -62,13 +65,50 @@ const Dashboard: React.FC<DashboardProps> = ({ factors }) => {
 
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-lg">
                 <div className="flex justify-between items-start mb-4">
-                    <div className="p-2 bg-orange-500/10 rounded-lg">
-                        <Users className="text-orange-500" size={24} />
+                    <div className="p-2 bg-purple-500/10 rounded-lg">
+                        <Server className="text-purple-500" size={24} />
                     </div>
                 </div>
-                <h3 className="text-3xl font-bold text-white">4</h3>
-                <p className="text-sm text-slate-400">Active Researchers</p>
+                <h3 className="text-3xl font-bold text-white">3</h3>
+                <p className="text-sm text-slate-400">Active Data Nodes</p>
             </div>
+        </div>
+        
+        {/* Data Feed Health */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg">
+             <h3 className="text-lg font-bold text-white mb-4">Data Feed Health</h3>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                 <div className="flex items-center justify-between p-3 border border-slate-800 rounded-lg bg-slate-950">
+                    <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                        <div>
+                            <p className="text-sm font-medium text-slate-200">TickDB (Market)</p>
+                            <p className="text-[10px] text-slate-500">L2 Stream Active</p>
+                        </div>
+                    </div>
+                    <span className="text-xs font-mono text-emerald-400">12ms</span>
+                 </div>
+                 <div className="flex items-center justify-between p-3 border border-slate-800 rounded-lg bg-slate-950">
+                    <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                        <div>
+                            <p className="text-sm font-medium text-slate-200">Edgar (Fund)</p>
+                            <p className="text-[10px] text-slate-500">Quarterly Sync OK</p>
+                        </div>
+                    </div>
+                    <span className="text-xs font-mono text-slate-400">Idle</span>
+                 </div>
+                 <div className="flex items-center justify-between p-3 border border-slate-800 rounded-lg bg-slate-950">
+                    <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                        <div>
+                            <p className="text-sm font-medium text-slate-200">FRED (Macro)</p>
+                            <p className="text-[10px] text-slate-500">Daily Sync OK</p>
+                        </div>
+                    </div>
+                    <span className="text-xs font-mono text-slate-400">Idle</span>
+                 </div>
+             </div>
         </div>
 
         {/* Charts Section */}
