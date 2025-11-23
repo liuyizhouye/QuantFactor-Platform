@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { generateFactorSuggestion } from '../services/geminiService';
 import { FactorFrequency, Factor, FactorCategory } from '../types';
@@ -27,8 +28,8 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor }) => {
       return false;
     }
     
-    if (input.length > 1000) {
-      setError("Prompt is too long (max 1000 characters).");
+    if (input.length > 5000) {
+      setError("Prompt is too long (max 5000 characters).");
       return false;
     }
 
@@ -79,7 +80,7 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor }) => {
   };
 
   return (
-    <div className="h-full flex flex-col gap-6 p-4 md:p-8 max-w-6xl mx-auto pb-20 md:pb-8">
+    <div className="h-full overflow-y-auto flex flex-col gap-6 p-4 md:p-8 max-w-6xl mx-auto pb-20 md:pb-8">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
           <BrainCircuit className="text-purple-500" size={32} />
@@ -88,7 +89,7 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor }) => {
         <p className="text-slate-400 text-sm md:text-base">Describe a market hypothesis, and the AI will formalize it into a mathematical factor.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 h-full">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 min-h-0">
         {/* Input Section */}
         <div className="col-span-1 flex flex-col gap-4">
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-6 shadow-xl flex flex-col gap-4">
@@ -162,7 +163,7 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor }) => {
         {/* Output Section */}
         <div className="col-span-1 lg:col-span-2">
           {result ? (
-            <div className="h-full bg-slate-900 border border-slate-800 rounded-xl p-6 md:p-8 shadow-xl flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 md:p-8 shadow-xl flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                 <div>
                   <span className="inline-block px-2 py-1 bg-purple-500/10 text-purple-400 text-xs font-bold rounded mb-2 border border-purple-500/20 uppercase tracking-wider">

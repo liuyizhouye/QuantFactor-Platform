@@ -8,7 +8,7 @@ const SettingsView: React.FC = () => {
   const [riskLimit, setRiskLimit] = useState("20");
 
   return (
-    <div className="p-8 max-w-4xl mx-auto space-y-8">
+    <div className="h-full overflow-y-auto p-8 max-w-4xl mx-auto space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-white flex items-center gap-3">
           <Settings className="text-slate-400" />

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Factor, FactorCategory } from '../types';
 import { Trash2, Edit, Code, Filter, X, Download } from 'lucide-react';
@@ -17,8 +18,14 @@ const LibraryView: React.FC<LibraryViewProps> = ({ factors, onDelete }) => {
     ? factors 
     : factors.filter(f => f.category === selectedCategory);
 
+  const handleDelete = (id: string) => {
+    if (window.confirm("Are you sure you want to delete this factor? This action cannot be undone.")) {
+        onDelete(id);
+    }
+  };
+
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="h-full overflow-y-auto p-8 max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
             <div>
                 <h1 className="text-2xl font-bold text-white">Factor Library</h1>
@@ -63,7 +70,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({ factors, onDelete }) => {
             )}
         </div>
 
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-4 pb-20">
             {filteredFactors.length === 0 ? (
                 <div className="text-center py-20 text-slate-500 bg-slate-900 rounded-xl border border-dashed border-slate-800">
                     {factors.length === 0 
@@ -98,7 +105,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({ factors, onDelete }) => {
                                     <Edit size={16} />
                                 </button>
                                 <button 
-                                    onClick={() => onDelete(factor.id)}
+                                    onClick={() => handleDelete(factor.id)}
                                     className="p-2 hover:bg-red-900/30 rounded-lg text-slate-400 hover:text-red-400 transition-colors"
                                 >
                                     <Trash2 size={16} />

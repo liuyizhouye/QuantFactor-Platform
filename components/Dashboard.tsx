@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Factor } from '../types';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
@@ -19,7 +20,7 @@ const Dashboard: React.FC<DashboardProps> = ({ factors }) => {
   const chartData = Object.keys(categories).map(k => ({ name: k, count: categories[k] }));
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 pb-20 md:pb-8">
+    <div className="h-full overflow-y-auto p-4 md:p-8 space-y-8 pb-20 md:pb-8 max-w-7xl mx-auto">
         <div>
             <h1 className="text-2xl font-bold text-white">Market Overview</h1>
             <p className="text-slate-400 text-sm md:text-base">System status and factor library statistics</p>

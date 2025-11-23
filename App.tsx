@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -7,6 +8,7 @@ import LibraryView from './components/LibraryView';
 import CombinationView from './components/CombinationView';
 import ConsoleView from './components/ConsoleView';
 import SettingsView from './components/SettingsView';
+import DataExplorerView from './components/DataExplorerView';
 import { Factor, FactorCategory, FactorFrequency } from './types';
 import { Menu } from 'lucide-react';
 
@@ -46,38 +48,8 @@ const App: React.FC = () => {
     setFactors(prev => prev.filter(f => f.id !== id));
   };
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'dashboard':
-        return <Dashboard factors={factors} />;
-      case 'mining':
-        return <MiningView onAddFactor={handleAddFactor} />;
-      case 'lab':
-        return <CombinationView factors={factors} onAddFactor={handleAddFactor} />;
-      case 'library':
-        return <LibraryView factors={factors} onDelete={handleDeleteFactor} />;
-      case 'backtest':
-        return <BacktestView factors={factors} />;
-      case 'console':
-        return <ConsoleView />;
-      case 'settings':
-        return <SettingsView />;
-      case 'data':
-        return (
-            <div className="flex h-full items-center justify-center text-slate-500">
-                <div className="text-center">
-                    <h2 className="text-xl font-bold mb-2">Data Explorer</h2>
-                    <p>Connect to TickDB or Parquet files to visualize raw data.</p>
-                </div>
-            </div>
-        );
-      default:
-        return <Dashboard factors={factors} />;
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans flex flex-col md:flex-row">
+    <div className="h-screen bg-slate-950 text-slate-200 font-sans flex overflow-hidden">
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
@@ -85,30 +57,68 @@ const App: React.FC = () => {
         onClose={() => setIsMobileMenuOpen(false)}
       />
       
-      {/* Mobile Header */}
-      <div className="md:hidden bg-slate-900 border-b border-slate-800 p-4 flex items-center justify-between z-30 sticky top-0">
-        <div className="flex items-center gap-3">
-             <button onClick={() => setIsMobileMenuOpen(true)} className="text-slate-400 hover:text-white">
-                <Menu size={24} />
-             </button>
-             <span className="font-bold text-lg text-white">QuantFactor</span>
-        </div>
-        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-blue-500"></div>
-      </div>
-
-      <main className="flex-1 md:ml-64 min-h-screen bg-slate-950 relative overflow-hidden">
-        {/* Background Grid Effect */}
-        <div className="absolute inset-0 pointer-events-none opacity-5" 
-             style={{
-                 backgroundImage: 'linear-gradient(#334155 1px, transparent 1px), linear-gradient(90deg, #334155 1px, transparent 1px)',
-                 backgroundSize: '40px 40px'
-             }}>
-        </div>
+      {/* Main Content Wrapper */}
+      <div className="flex-1 flex flex-col md:ml-64 min-w-0 transition-all duration-300 h-full relative">
         
-        <div className="relative z-10 h-full">
-            {renderContent()}
+        {/* Mobile Header */}
+        <div className="md:hidden bg-slate-900 border-b border-slate-800 p-4 flex items-center justify-between z-30 shrink-0">
+          <div className="flex items-center gap-3">
+              <button onClick={() => setIsMobileMenuOpen(true)} className="text-slate-400 hover:text-white">
+                  <Menu size={24} />
+              </button>
+              <span className="font-bold text-lg text-white">QuantFactor</span>
+          </div>
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-blue-500"></div>
         </div>
-      </main>
+
+        <main className="flex-1 overflow-hidden relative bg-slate-950">
+          {/* Background Grid Effect */}
+          <div className="absolute inset-0 pointer-events-none opacity-5 z-0" 
+              style={{
+                  backgroundImage: 'linear-gradient(#334155 1px, transparent 1px), linear-gradient(90deg, #334155 1px, transparent 1px)',
+                  backgroundSize: '40px 40px'
+              }}>
+          </div>
+          
+          {/* 
+            View State Persistence:
+            We render all views but hide the inactive ones. 
+            This preserves input state (like text in MiningView or ConsoleView) when switching tabs.
+          */}
+          <div className={`h-full z-10 relative ${activeTab === 'dashboard' ? 'block' : 'hidden'}`}>
+             <Dashboard factors={factors} />
+          </div>
+          
+          <div className={`h-full z-10 relative ${activeTab === 'mining' ? 'block' : 'hidden'}`}>
+             <MiningView onAddFactor={handleAddFactor} />
+          </div>
+
+          <div className={`h-full z-10 relative ${activeTab === 'lab' ? 'block' : 'hidden'}`}>
+             <CombinationView factors={factors} onAddFactor={handleAddFactor} />
+          </div>
+
+          <div className={`h-full z-10 relative ${activeTab === 'library' ? 'block' : 'hidden'}`}>
+             <LibraryView factors={factors} onDelete={handleDeleteFactor} />
+          </div>
+
+          <div className={`h-full z-10 relative ${activeTab === 'backtest' ? 'block' : 'hidden'}`}>
+             <BacktestView factors={factors} />
+          </div>
+
+          <div className={`h-full z-10 relative ${activeTab === 'console' ? 'block' : 'hidden'}`}>
+             <ConsoleView />
+          </div>
+
+          <div className={`h-full z-10 relative ${activeTab === 'settings' ? 'block' : 'hidden'}`}>
+             <SettingsView />
+          </div>
+
+          <div className={`h-full z-10 relative ${activeTab === 'data' ? 'block' : 'hidden'}`}>
+             <DataExplorerView />
+          </div>
+
+        </main>
+      </div>
     </div>
   );
 };

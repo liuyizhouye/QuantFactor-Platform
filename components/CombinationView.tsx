@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Factor, FactorCategory, FactorFrequency } from '../types';
+import { Factor, FactorCategory, FactorFrequency, BacktestResult } from '../types';
 import { generateFactorCombination } from '../services/geminiService';
-import { FlaskConical, Plus, Check, Save, Loader2, ArrowRight, Layers, Code2, ShieldAlert, SlidersHorizontal } from 'lucide-react';
+import { runMultiFactorBacktest } from '../services/mockDataService';
+import { FlaskConical, Check, Save, Loader2, ArrowRight, Layers, Code2, ShieldAlert, LineChart, PieChart } from 'lucide-react';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 
 interface CombinationViewProps {
   factors: Factor[];
@@ -10,9 +12,12 @@ interface CombinationViewProps {
 
 const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddFactor }) => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [goal, setGoal] = useState('');
+  const [weightingMethod, setWeightingMethod] = useState('Equal Weight');
+  
+  // State
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{name: string, formula: string, description: string, category: string, logic_explanation: string} | null>(null);
+  const [formulaResult, setFormulaResult] = useState<{name: string, formula: string, description: string, category: string, logic_explanation: string} | null>(null);
+  const [backtestResult, setBacktestResult] = useState<BacktestResult | null>(null);
 
   // Risk Settings
   const [sectorNeutral, setSectorNeutral] = useState(false);
@@ -30,81 +35,104 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddFactor 
     setSelectedIds(newSelected);
   };
 
-  const handleCombine = async () => {
+  const handleOptimizeAndBacktest = async () => {
     if (selectedIds.size < 2) return;
     setLoading(true);
-    setResult(null);
+    setFormulaResult(null);
+    setBacktestResult(null);
 
     const selectedFactors = factors.filter(f => selectedIds.has(f.id));
     
     try {
+      // 1. Generate the Combination Logic (AI)
       const riskConfig = {
         sectorNeutral,
         styleNeutral,
         maxDrawdown: maxDrawdown || undefined,
         targetVol: targetVol || undefined
       };
+      
+      // We pass the weighting method as part of the goal for AI generation
+      const strategyGoal = `Combine using ${weightingMethod} scheme. Optimize for risk-adjusted returns using Barra constraints.`;
+      
+      const aiData = await generateFactorCombination(selectedFactors, strategyGoal, riskConfig);
+      setFormulaResult(aiData);
 
-      const data = await generateFactorCombination(selectedFactors, goal, riskConfig);
-      setResult(data);
+      // 2. Run Portfolio Simulation (Mock)
+      // In a real app, we would send the formula/weights to a backtest engine
+      setTimeout(() => {
+          const btResult = runMultiFactorBacktest();
+          setBacktestResult(btResult);
+          setLoading(false);
+      }, 1000);
+
     } catch (error) {
       console.error("Failed to combine factors", error);
-    } finally {
       setLoading(false);
     }
   };
 
   const handleSave = () => {
-    if (!result) return;
+    if (!formulaResult) return;
     const newFactor: Factor = {
       id: Date.now().toString(),
-      name: result.name,
-      description: result.description,
-      formula: result.formula,
-      frequency: FactorFrequency.LOW_FREQ, // Defaulting to Low Freq for composites usually, could be inferred
-      category: result.category as FactorCategory,
+      name: formulaResult.name,
+      description: formulaResult.description,
+      formula: formulaResult.formula,
+      frequency: FactorFrequency.LOW_FREQ, 
+      category: formulaResult.category as FactorCategory,
       createdAt: new Date().toISOString(),
-      performance: {
-        sharpe: 0,
-        ic: 0,
-        annualizedReturn: 0,
-        maxDrawdown: 0
-      }
+      performance: backtestResult ? {
+        sharpe: backtestResult.metrics.sharpeRatio,
+        ic: 0.15, // Mock
+        annualizedReturn: backtestResult.metrics.totalReturn,
+        maxDrawdown: backtestResult.metrics.maxDrawdown
+      } : undefined
     };
     onAddFactor(newFactor);
-    setResult(null);
+    // Reset
+    setFormulaResult(null);
+    setBacktestResult(null);
     setSelectedIds(new Set());
-    setGoal('');
     setSectorNeutral(false);
     setStyleNeutral(false);
-    setMaxDrawdown('');
-    setTargetVol('');
   };
 
+  const chartData = backtestResult ? backtestResult.dates.map((date, i) => ({
+    date,
+    Portfolio: backtestResult.portfolioValue[i],
+    Benchmark: backtestResult.benchmarkValue[i]
+  })) : [];
+
   return (
-    <div className="h-full flex flex-col p-4 md:p-8 max-w-7xl mx-auto gap-6 overflow-y-auto pb-20 md:pb-8">
-      <div>
+    <div className="flex flex-col h-full p-4 md:p-8 max-w-7xl mx-auto gap-6 lg:overflow-hidden overflow-y-auto">
+      {/* Header - Fixed on Desktop */}
+      <div className="shrink-0">
         <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
           <FlaskConical className="text-pink-500" size={32} />
-          Factor Lab
+          Multi-Factor Model Lab
         </h1>
-        <p className="text-slate-400 text-sm md:text-base">Combine existing alpha signals and apply risk controls.</p>
+        <p className="text-slate-400 text-sm md:text-base">Construct portfolios using factor combinations, apply Barra optimization, and backtest.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 h-full min-h-0">
+      {/* Main Layout: Split Pane on Desktop, Stacked on Mobile */}
+      <div className="flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-12 gap-6 md:gap-8">
         
         {/* Left Panel: Factor Selection */}
-        <div className="lg:col-span-4 flex flex-col gap-4 min-h-0">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex-1 flex flex-col min-h-0 shadow-lg">
-            <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4 flex items-center justify-between">
-                <span>Available Factors</span>
-                <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-400">{selectedIds.size} selected</span>
-            </h3>
+        <div className="lg:col-span-4 flex flex-col min-h-[400px] lg:min-h-0 lg:h-full bg-slate-900 border border-slate-800 rounded-xl shadow-lg overflow-hidden shrink-0">
+            <div className="p-4 border-b border-slate-800 bg-slate-950/50 flex items-center justify-between shrink-0">
+                <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider">Factor Pool</h3>
+                <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-400 border border-slate-700">{selectedIds.size} selected</span>
+            </div>
             
-            <div className="flex-1 overflow-y-auto pr-2 space-y-2 max-h-[300px] lg:max-h-[600px]">
+            <div className="flex-1 overflow-y-auto p-2 space-y-2">
                 {factors.length === 0 ? (
-                    <div className="text-center py-10 text-slate-500 text-sm">
-                        No factors in library. Go to Mining to create some first.
+                    <div className="flex flex-col items-center justify-center h-full text-slate-500 text-sm p-6 text-center gap-2">
+                         <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center mb-2">
+                            <FlaskConical size={18} className="opacity-50" />
+                         </div>
+                        <p>No factors found.</p>
+                        <p className="text-xs">Go to Mining to generate new alpha factors.</p>
                     </div>
                 ) : (
                     factors.map(factor => {
@@ -113,19 +141,22 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddFactor 
                             <div 
                                 key={factor.id}
                                 onClick={() => toggleFactor(factor.id)}
-                                className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                                className={`p-3 rounded-lg border cursor-pointer transition-all group ${
                                     isSelected 
                                     ? 'bg-blue-600/10 border-blue-600/50' 
-                                    : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                                    : 'bg-slate-950/50 border-slate-800/50 hover:border-slate-700 hover:bg-slate-900'
                                 }`}
                             >
-                                <div className="flex justify-between items-start">
-                                    <div className="flex-1">
-                                        <h4 className={`text-sm font-semibold ${isSelected ? 'text-blue-300' : 'text-slate-300'}`}>{factor.name}</h4>
-                                        <p className="text-xs text-slate-500 mt-1 line-clamp-1">{factor.description}</p>
+                                <div className="flex justify-between items-start gap-3">
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className={`text-sm font-semibold truncate ${isSelected ? 'text-blue-300' : 'text-slate-300 group-hover:text-slate-200'}`}>{factor.name}</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-400">{factor.category}</span>
+                                            <span className="text-[10px] text-emerald-400 font-mono">IC: {(Math.random() * 0.1).toFixed(2)}</span>
+                                        </div>
                                     </div>
-                                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
-                                        isSelected ? 'bg-blue-600 border-blue-600' : 'border-slate-600'
+                                    <div className={`w-5 h-5 shrink-0 rounded-full border flex items-center justify-center transition-colors mt-0.5 ${
+                                        isSelected ? 'bg-blue-600 border-blue-600' : 'border-slate-600 bg-slate-900'
                                     }`}>
                                         {isSelected && <Check size={12} className="text-white" />}
                                     </div>
@@ -135,149 +166,198 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddFactor 
                     })
                 )}
             </div>
-          </div>
         </div>
 
         {/* Right Panel: Configuration & Output */}
-        <div className="lg:col-span-8 flex flex-col gap-6">
+        <div className="lg:col-span-8 flex flex-col gap-6 lg:h-full lg:overflow-y-auto pr-0 lg:pr-2 pb-20 lg:pb-0">
             
             {/* Strategy & Risk Configuration */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg space-y-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg space-y-6 shrink-0">
                 
-                {/* User Goal */}
+                {/* Weighting Method */}
                 <div>
-                    <label className="text-sm font-semibold text-slate-300 mb-2 block">Combination Goal</label>
-                    <input 
-                        type="text" 
-                        value={goal}
-                        onChange={(e) => setGoal(e.target.value)}
-                        placeholder="e.g. Maximize Sharpe ratio while minimizing turnover..."
+                    <label className="text-sm font-semibold text-slate-300 mb-2 block flex items-center gap-2">
+                        <PieChart size={16} /> Weighting Scheme
+                    </label>
+                    <select
+                        value={weightingMethod}
+                        onChange={(e) => setWeightingMethod(e.target.value)}
                         className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-pink-500/50"
-                    />
+                    >
+                        <option value="Equal Weight">Equal Weight (1/N)</option>
+                        <option value="IC Weighted">IC Weighted (Information Coefficient)</option>
+                        <option value="Risk Parity">Risk Parity / Inv-Vol</option>
+                        <option value="Max Sharpe">Maximize Sharpe Ratio (Mean-Variance)</option>
+                    </select>
                 </div>
 
-                {/* Risk Control Section */}
-                <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
-                    <div className="flex items-center gap-2 mb-4">
+                {/* Risk Control Section (Barra) */}
+                <div className="bg-slate-950/50 rounded-lg p-5 border border-slate-800">
+                    <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-800/50">
                         <ShieldAlert className="text-orange-500" size={18} />
-                        <h3 className="text-sm font-bold text-slate-300 uppercase">Risk Management & Barra Model</h3>
+                        <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Barra Optimization Constraints</h3>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Neutrality Settings */}
                         <div className="space-y-3">
-                            <label className="flex items-center gap-3 cursor-pointer group">
-                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${sectorNeutral ? 'bg-emerald-600 border-emerald-600' : 'border-slate-600 bg-slate-900'}`}>
+                            <label className="flex items-start gap-3 cursor-pointer group p-2 hover:bg-slate-900 rounded-lg transition-colors">
+                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors mt-0.5 ${sectorNeutral ? 'bg-emerald-600 border-emerald-600' : 'border-slate-600 bg-slate-950'}`}>
                                     {sectorNeutral && <Check size={14} className="text-white" />}
                                 </div>
                                 <input type="checkbox" className="hidden" checked={sectorNeutral} onChange={() => setSectorNeutral(!sectorNeutral)} />
                                 <div>
-                                    <span className="text-sm text-slate-300 font-medium group-hover:text-emerald-400 transition-colors">Sector Neutrality</span>
-                                    <p className="text-[10px] text-slate-500">Residualize against Barra Sector factors</p>
+                                    <span className="text-sm text-slate-300 font-medium group-hover:text-emerald-400 transition-colors">Sector Neutral</span>
+                                    <p className="text-xs text-slate-500 mt-0.5">Zero exposure to GICS sectors</p>
                                 </div>
                             </label>
 
-                            <label className="flex items-center gap-3 cursor-pointer group">
-                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${styleNeutral ? 'bg-emerald-600 border-emerald-600' : 'border-slate-600 bg-slate-900'}`}>
+                            <label className="flex items-start gap-3 cursor-pointer group p-2 hover:bg-slate-900 rounded-lg transition-colors">
+                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors mt-0.5 ${styleNeutral ? 'bg-emerald-600 border-emerald-600' : 'border-slate-600 bg-slate-950'}`}>
                                     {styleNeutral && <Check size={14} className="text-white" />}
                                 </div>
                                 <input type="checkbox" className="hidden" checked={styleNeutral} onChange={() => setStyleNeutral(!styleNeutral)} />
                                 <div>
-                                    <span className="text-sm text-slate-300 font-medium group-hover:text-emerald-400 transition-colors">Style Neutrality</span>
-                                    <p className="text-[10px] text-slate-500">Neutralize Size, Momentum, Value exposure</p>
+                                    <span className="text-sm text-slate-300 font-medium group-hover:text-emerald-400 transition-colors">Style Neutral</span>
+                                    <p className="text-xs text-slate-500 mt-0.5">Neutralize Size, Value, Momentum</p>
                                 </div>
                             </label>
                         </div>
 
-                        {/* Constraints */}
-                        <div className="space-y-3">
+                        {/* Constraints Inputs */}
+                        <div className="space-y-4">
                             <div>
-                                <label className="text-xs text-slate-400 mb-1 block">Max Drawdown Constraint (%)</label>
-                                <input 
-                                    type="number" 
-                                    value={maxDrawdown}
-                                    onChange={(e) => setMaxDrawdown(e.target.value)}
-                                    placeholder="e.g. 15"
-                                    className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-200 focus:border-emerald-500 focus:outline-none"
-                                />
+                                <label className="text-xs font-medium text-slate-400 mb-1.5 block">Max Drawdown Constraint (%)</label>
+                                <div className="relative">
+                                    <input 
+                                        type="number" 
+                                        value={maxDrawdown}
+                                        onChange={(e) => setMaxDrawdown(e.target.value)}
+                                        placeholder="None"
+                                        className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:border-emerald-500 focus:outline-none pl-3 pr-8"
+                                    />
+                                    <span className="absolute right-3 top-2 text-slate-500 text-xs">%</span>
+                                </div>
                             </div>
                              <div>
-                                <label className="text-xs text-slate-400 mb-1 block">Target Volatility (%)</label>
-                                <input 
-                                    type="number" 
-                                    value={targetVol}
-                                    onChange={(e) => setTargetVol(e.target.value)}
-                                    placeholder="e.g. 10"
-                                    className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-200 focus:border-emerald-500 focus:outline-none"
-                                />
+                                <label className="text-xs font-medium text-slate-400 mb-1.5 block">Target Portfolio Volatility (%)</label>
+                                <div className="relative">
+                                    <input 
+                                        type="number" 
+                                        value={targetVol}
+                                        onChange={(e) => setTargetVol(e.target.value)}
+                                        placeholder="None"
+                                        className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:border-emerald-500 focus:outline-none pl-3 pr-8"
+                                    />
+                                    <span className="absolute right-3 top-2 text-slate-500 text-xs">%</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Action Button */}
-                <div className="flex justify-end pt-2">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-2 border-t border-slate-800">
+                    <p className="text-xs text-slate-500">
+                        {selectedIds.size < 2 ? (
+                            <span className="text-orange-400 flex items-center gap-1"><ShieldAlert size={12}/> Select at least 2 factors</span>
+                        ) : (
+                            <span>Optimization Universe: S&P 500</span>
+                        )}
+                    </p>
                     <button 
-                        onClick={handleCombine}
+                        onClick={handleOptimizeAndBacktest}
                         disabled={loading || selectedIds.size < 2}
-                        className="px-6 py-3 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-semibold rounded-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all w-full md:w-auto justify-center"
+                        className="w-full md:w-auto px-6 py-2.5 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-semibold rounded-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
                     >
-                        {loading ? <Loader2 className="animate-spin" size={18} /> : <Layers size={18} />}
-                        Synthesize & Optimize
+                        {loading ? <Loader2 className="animate-spin" size={18} /> : <LineChart size={18} />}
+                        Optimize & Backtest Portfolio
                     </button>
                 </div>
-                 {selectedIds.size < 2 && (
-                    <p className="text-xs text-orange-400 text-center">
-                         Select at least 2 factors to combine.
-                    </p>
-                )}
             </div>
 
             {/* Result Area */}
-            <div className="flex-1 min-h-[300px]">
-                {result ? (
-                    <div className="h-full bg-slate-900 border border-slate-800 rounded-xl p-8 shadow-xl flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+            <div className="flex-1 min-h-[400px]">
+                {formulaResult && backtestResult ? (
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        
+                        {/* Header & Save */}
+                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 border-b border-slate-800 pb-4">
                             <div>
                                 <div className="flex gap-2 mb-2">
                                      <span className="inline-block px-2 py-1 bg-pink-500/10 text-pink-400 text-xs font-bold rounded border border-pink-500/20 uppercase tracking-wider">
-                                        {result.category}
+                                        Multi-Factor
                                     </span>
-                                    {(sectorNeutral || styleNeutral) && (
-                                        <span className="inline-block px-2 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded border border-emerald-500/20 uppercase tracking-wider flex items-center gap-1">
-                                            <ShieldAlert size={10} /> Risk Neutral
-                                        </span>
-                                    )}
+                                    <span className="inline-block px-2 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded border border-emerald-500/20 uppercase tracking-wider">
+                                        Barra Optimized
+                                    </span>
                                 </div>
-                                <h2 className="text-2xl font-bold text-white">{result.name}</h2>
-                                <p className="text-slate-400 mt-1">{result.description}</p>
+                                <h2 className="text-xl md:text-2xl font-bold text-white">Optimized Portfolio Result</h2>
+                                <p className="text-slate-400 mt-1 text-sm">{formulaResult.description}</p>
                             </div>
-                            <button 
+                             <button 
                                 onClick={handleSave}
                                 className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors w-full sm:w-auto justify-center"
                             >
                                 <Save size={16} />
-                                Save Composite
+                                Save Strategy
                             </button>
                         </div>
 
-                        <div className="bg-slate-950 rounded-lg border border-slate-800 overflow-hidden">
-                            <div className="bg-slate-900/50 px-4 py-2 border-b border-slate-800 flex items-center gap-2">
-                                <Code2 size={14} className="text-slate-400" />
-                                <span className="text-xs font-mono text-slate-400">optimized_factor.py</span>
-                            </div>
-                            <div className="p-4 overflow-x-auto">
-                                <pre className="text-sm font-mono text-pink-300">
-                                    <code>{result.formula}</code>
-                                </pre>
-                            </div>
+                        {/* Performance Chart */}
+                        <div className="h-[300px] w-full bg-slate-950 rounded-lg p-4 border border-slate-800">
+                            <h3 className="text-xs font-bold text-slate-400 uppercase mb-4">Cumulative Active Return</h3>
+                            <ResponsiveContainer width="100%" height="90%">
+                                <AreaChart data={chartData}>
+                                    <defs>
+                                        <linearGradient id="colorPortfolio" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#ec4899" stopOpacity={0.3}/>
+                                            <stop offset="95%" stopColor="#ec4899" stopOpacity={0}/>
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                                    <XAxis dataKey="date" stroke="#64748b" tick={{fontSize: 10}} tickFormatter={(v) => v.substring(5)} />
+                                    <YAxis stroke="#64748b" tick={{fontSize: 10}} domain={['auto', 'auto']} />
+                                    <Tooltip contentStyle={{backgroundColor: '#0f172a', borderColor: '#334155'}} itemStyle={{color: '#e2e8f0'}} />
+                                    <Legend />
+                                    <Area name="Optimized Portfolio" type="monotone" dataKey="Portfolio" stroke="#ec4899" strokeWidth={2} fillOpacity={1} fill="url(#colorPortfolio)" />
+                                    <Area name="Benchmark" type="monotone" dataKey="Benchmark" stroke="#64748b" strokeWidth={2} fillOpacity={0} fill="transparent" strokeDasharray="5 5" />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                        
+                        {/* Metrics Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                             <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                                <p className="text-[10px] text-slate-500 uppercase">Sharpe Ratio</p>
+                                <p className="text-lg font-bold text-emerald-400">{backtestResult.metrics.sharpeRatio.toFixed(2)}</p>
+                             </div>
+                             <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                                <p className="text-[10px] text-slate-500 uppercase">Alpha</p>
+                                <p className="text-lg font-bold text-purple-400">{(backtestResult.metrics.alpha * 100).toFixed(2)}%</p>
+                             </div>
+                             <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                                <p className="text-[10px] text-slate-500 uppercase">Beta</p>
+                                <p className="text-lg font-bold text-blue-400">{backtestResult.metrics.beta.toFixed(2)}</p>
+                             </div>
+                             <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                                <p className="text-[10px] text-slate-500 uppercase">Max Drawdown</p>
+                                <p className="text-lg font-bold text-red-400">{(backtestResult.metrics.maxDrawdown * 100).toFixed(2)}%</p>
+                             </div>
                         </div>
 
-                        <div className="flex-1 bg-slate-900/50 rounded-lg p-6 border border-slate-800/50">
-                            <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-3">Synthesis & Risk Logic</h3>
-                            <p className="text-slate-300 leading-relaxed text-sm md:text-base">
-                                {result.logic_explanation}
+                        {/* Logic Explanation */}
+                        <div className="bg-slate-900/50 rounded-lg p-6 border border-slate-800/50">
+                            <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-3">Optimization Logic</h3>
+                            <p className="text-slate-300 leading-relaxed text-sm">
+                                {formulaResult.logic_explanation}
                             </p>
+                            <div className="mt-4 pt-4 border-t border-slate-800">
+                                <p className="text-xs text-slate-500 font-mono">
+                                    Constraint: {sectorNeutral ? 'Sector Neutral (Active)' : 'Sector Neutral (Off)'} | 
+                                    Method: {weightingMethod}
+                                </p>
+                            </div>
                         </div>
                     </div>
                 ) : (
@@ -285,7 +365,7 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddFactor 
                         <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center">
                             <ArrowRight size={24} className="text-slate-600" />
                         </div>
-                        <p className="text-center">Select factors, configure risk settings, and click Synthesize.</p>
+                        <p className="text-center">Select factors, configure Barra optimization, and run backtest.</p>
                     </div>
                 )}
             </div>
