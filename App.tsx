@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -6,10 +5,11 @@ import MiningView from './components/MiningView';
 import BacktestView from './components/BacktestView';
 import LibraryView from './components/LibraryView';
 import CombinationView from './components/CombinationView';
+import PortfolioLibraryView from './components/PortfolioLibraryView';
 import ConsoleView from './components/ConsoleView';
 import SettingsView from './components/SettingsView';
 import DataExplorerView from './components/DataExplorerView';
-import { Factor, FactorCategory, FactorFrequency } from './types';
+import { Factor, FactorCategory, FactorFrequency, Portfolio } from './types';
 import { Menu } from 'lucide-react';
 
 // Initial Mock Data
@@ -37,6 +37,7 @@ const INITIAL_FACTORS: Factor[] = [
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [factors, setFactors] = useState<Factor[]>(INITIAL_FACTORS);
+  const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleAddFactor = (factor: Factor) => {
@@ -44,8 +45,17 @@ const App: React.FC = () => {
     setActiveTab('library');
   };
 
+  const handleAddPortfolio = (portfolio: Portfolio) => {
+    setPortfolios(prev => [portfolio, ...prev]);
+    setActiveTab('portfolio-lib');
+  };
+
   const handleDeleteFactor = (id: string) => {
     setFactors(prev => prev.filter(f => f.id !== id));
+  };
+  
+  const handleDeletePortfolio = (id: string) => {
+    setPortfolios(prev => prev.filter(p => p.id !== id));
   };
 
   return (
@@ -83,7 +93,7 @@ const App: React.FC = () => {
           {/* 
             View State Persistence:
             We render all views but hide the inactive ones. 
-            This preserves input state (like text in MiningView or ConsoleView) when switching tabs.
+            This preserves input state when switching tabs.
           */}
           <div className={`h-full z-10 relative ${activeTab === 'dashboard' ? 'block' : 'hidden'}`}>
              <Dashboard factors={factors} />
@@ -93,15 +103,19 @@ const App: React.FC = () => {
              <MiningView onAddFactor={handleAddFactor} />
           </div>
 
-          <div className={`h-full z-10 relative ${activeTab === 'lab' ? 'block' : 'hidden'}`}>
-             <CombinationView factors={factors} onAddFactor={handleAddFactor} />
+          <div className={`h-full z-10 relative ${activeTab === 'portfolio-lab' ? 'block' : 'hidden'}`}>
+             <CombinationView factors={factors} onAddPortfolio={handleAddPortfolio} />
           </div>
 
           <div className={`h-full z-10 relative ${activeTab === 'library' ? 'block' : 'hidden'}`}>
              <LibraryView factors={factors} onDelete={handleDeleteFactor} />
           </div>
+          
+          <div className={`h-full z-10 relative ${activeTab === 'portfolio-lib' ? 'block' : 'hidden'}`}>
+             <PortfolioLibraryView portfolios={portfolios} onDelete={handleDeletePortfolio} factors={factors} />
+          </div>
 
-          <div className={`h-full z-10 relative ${activeTab === 'backtest' ? 'block' : 'hidden'}`}>
+          <div className={`h-full z-10 relative ${activeTab === 'single-backtest' ? 'block' : 'hidden'}`}>
              <BacktestView factors={factors} />
           </div>
 

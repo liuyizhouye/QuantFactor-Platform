@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { runMockBacktest, generateMarketData } from '../services/mockDataService';
 import { explainBacktestResults } from '../services/geminiService';
@@ -13,12 +13,30 @@ const BacktestView: React.FC<BacktestViewProps> = ({ factors }) => {
   const [selectedFactor, setSelectedFactor] = useState<string>("");
   const [result, setResult] = useState<BacktestResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [analysis, setAnalysis] = useState<string>("");
+  
+  const progressInterval = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+        if (progressInterval.current) clearInterval(progressInterval.current);
+    };
+  }, []);
 
   const handleRun = async () => {
     setLoading(true);
     setResult(null);
     setAnalysis("");
+    setProgress(0);
+    
+    // Simulate Progress
+    progressInterval.current = setInterval(() => {
+        setProgress(prev => {
+            if (prev >= 95) return prev;
+            return prev + Math.floor(Math.random() * 10) + 1;
+        });
+    }, 200);
     
     // Simulate processing time
     setTimeout(async () => {
@@ -29,8 +47,10 @@ const BacktestView: React.FC<BacktestViewProps> = ({ factors }) => {
         const text = await explainBacktestResults(mockResult.metrics);
         setAnalysis(text);
         
+        if (progressInterval.current) clearInterval(progressInterval.current);
+        setProgress(100);
         setLoading(false);
-    }, 1500);
+    }, 2500);
   };
 
   // Combine dates and values for Recharts
@@ -41,7 +61,7 @@ const BacktestView: React.FC<BacktestViewProps> = ({ factors }) => {
   })) : [];
 
   return (
-    <div className="h-full flex flex-col p-8 max-w-7xl mx-auto gap-6 overflow-y-auto">
+    <div className="h-full flex flex-col p-8 max-w-7xl mx-auto gap-6 overflow-y-auto pb-24">
        <div className="flex justify-between items-center">
             <div>
                 <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -100,7 +120,7 @@ const BacktestView: React.FC<BacktestViewProps> = ({ factors }) => {
                                 disabled={loading || !selectedFactor}
                                 className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                             >
-                                {loading ? 'Calculating IC...' : <><Play size={16} /> Run Backtest</>}
+                                {loading ? 'Running...' : <><Play size={16} /> Run Backtest</>}
                             </button>
                         </div>
                     </div>
@@ -109,9 +129,26 @@ const BacktestView: React.FC<BacktestViewProps> = ({ factors }) => {
 
             {/* Results Panel */}
             <div className="col-span-12 lg:col-span-9 flex flex-col gap-6">
-                {result ? (
+                
+                {/* Progress Bar */}
+                {loading && (
+                    <div className="w-full bg-slate-900 rounded-lg p-4 border border-slate-800 shadow-lg">
+                        <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm text-slate-300 font-medium">Simulating Historical Performance...</span>
+                            <span className="text-sm text-blue-400 font-mono">{progress}%</span>
+                        </div>
+                        <div className="w-full bg-slate-800 rounded-full h-2">
+                            <div 
+                                className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out" 
+                                style={{ width: `${progress}%` }}
+                            ></div>
+                        </div>
+                    </div>
+                )}
+
+                {!loading && result ? (
                     <>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-4">
                             <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
                                 <p className="text-xs text-slate-500 uppercase">Information Coeff (IC)</p>
                                 <p className={`text-xl font-bold font-mono ${result.metrics.alpha > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -132,7 +169,7 @@ const BacktestView: React.FC<BacktestViewProps> = ({ factors }) => {
                             </div>
                         </div>
 
-                        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg h-[400px]">
+                        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg h-[400px] animate-in fade-in slide-in-from-bottom-6">
                             <h3 className="text-sm font-bold text-slate-300 mb-4">Long-Short Cumulative Return</h3>
                             <ResponsiveContainer width="100%" height="90%">
                                 <AreaChart data={chartData}>
@@ -157,7 +194,7 @@ const BacktestView: React.FC<BacktestViewProps> = ({ factors }) => {
                         </div>
 
                         {analysis && (
-                            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg border-l-4 border-l-purple-500">
+                            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg border-l-4 border-l-purple-500 animate-in fade-in slide-in-from-bottom-8">
                                 <div className="flex items-center gap-2 mb-2">
                                     <TrendingUp size={18} className="text-purple-500" />
                                     <h3 className="text-sm font-bold text-white">AI Alpha Analysis</h3>
@@ -169,10 +206,12 @@ const BacktestView: React.FC<BacktestViewProps> = ({ factors }) => {
                         )}
                     </>
                 ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-slate-600 border border-dashed border-slate-800 rounded-xl bg-slate-900/20">
-                        <Activity size={48} className="mb-4 opacity-50" />
-                        <p>Select a factor to analyze its standalone performance</p>
-                    </div>
+                    !loading && (
+                        <div className="h-full flex flex-col items-center justify-center text-slate-600 border border-dashed border-slate-800 rounded-xl bg-slate-900/20">
+                            <Activity size={48} className="mb-4 opacity-50" />
+                            <p>Select a factor to analyze its standalone performance</p>
+                        </div>
+                    )
                 )}
             </div>
        </div>

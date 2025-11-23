@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Factor, FactorCategory, FactorFrequency, BacktestResult } from '../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { Factor, FactorCategory, FactorFrequency, BacktestResult, Portfolio } from '../types';
 import { generateFactorCombination } from '../services/geminiService';
 import { runMultiFactorBacktest } from '../services/mockDataService';
 import { FlaskConical, Check, Save, Loader2, ArrowRight, Layers, Code2, ShieldAlert, LineChart, PieChart } from 'lucide-react';
@@ -7,15 +7,16 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianG
 
 interface CombinationViewProps {
   factors: Factor[];
-  onAddFactor: (factor: Factor) => void;
+  onAddPortfolio: (portfolio: Portfolio) => void;
 }
 
-const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddFactor }) => {
+const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddPortfolio }) => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [weightingMethod, setWeightingMethod] = useState('Equal Weight');
   
   // State
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [formulaResult, setFormulaResult] = useState<{name: string, formula: string, description: string, category: string, logic_explanation: string} | null>(null);
   const [backtestResult, setBacktestResult] = useState<BacktestResult | null>(null);
 
@@ -24,6 +25,14 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddFactor 
   const [styleNeutral, setStyleNeutral] = useState(false);
   const [maxDrawdown, setMaxDrawdown] = useState('');
   const [targetVol, setTargetVol] = useState('');
+
+  const progressInterval = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+        if (progressInterval.current) clearInterval(progressInterval.current);
+    };
+  }, []);
 
   const toggleFactor = (id: string) => {
     const newSelected = new Set(selectedIds);
@@ -40,9 +49,18 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddFactor 
     setLoading(true);
     setFormulaResult(null);
     setBacktestResult(null);
+    setProgress(0);
 
     const selectedFactors = factors.filter(f => selectedIds.has(f.id));
     
+    // Start Progress Bar
+    progressInterval.current = setInterval(() => {
+        setProgress(prev => {
+            if (prev >= 90) return prev;
+            return prev + Math.floor(Math.random() * 5) + 2;
+        });
+    }, 150);
+
     try {
       // 1. Generate the Combination Logic (AI)
       const riskConfig = {
@@ -52,50 +70,62 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddFactor 
         targetVol: targetVol || undefined
       };
       
-      // We pass the weighting method as part of the goal for AI generation
       const strategyGoal = `Combine using ${weightingMethod} scheme. Optimize for risk-adjusted returns using Barra constraints.`;
       
       const aiData = await generateFactorCombination(selectedFactors, strategyGoal, riskConfig);
       setFormulaResult(aiData);
 
       // 2. Run Portfolio Simulation (Mock)
-      // In a real app, we would send the formula/weights to a backtest engine
       setTimeout(() => {
           const btResult = runMultiFactorBacktest();
           setBacktestResult(btResult);
+          
+          if (progressInterval.current) clearInterval(progressInterval.current);
+          setProgress(100);
           setLoading(false);
       }, 1000);
 
     } catch (error) {
       console.error("Failed to combine factors", error);
+      if (progressInterval.current) clearInterval(progressInterval.current);
       setLoading(false);
     }
   };
 
   const handleSave = () => {
-    if (!formulaResult) return;
-    const newFactor: Factor = {
-      id: Date.now().toString(),
-      name: formulaResult.name,
-      description: formulaResult.description,
-      formula: formulaResult.formula,
-      frequency: FactorFrequency.LOW_FREQ, 
-      category: formulaResult.category as FactorCategory,
-      createdAt: new Date().toISOString(),
-      performance: backtestResult ? {
-        sharpe: backtestResult.metrics.sharpeRatio,
-        ic: 0.15, // Mock
-        annualizedReturn: backtestResult.metrics.totalReturn,
-        maxDrawdown: backtestResult.metrics.maxDrawdown
-      } : undefined
+    if (!formulaResult || !backtestResult) return;
+    
+    const newPortfolio: Portfolio = {
+        id: Date.now().toString(),
+        name: formulaResult.name,
+        description: formulaResult.description,
+        createdAt: new Date().toISOString(),
+        strategy: weightingMethod,
+        factorIds: Array.from(selectedIds),
+        constraints: {
+            sectorNeutral,
+            styleNeutral,
+            maxDrawdown: maxDrawdown || undefined,
+            targetVol: targetVol || undefined
+        },
+        performance: {
+            sharpe: backtestResult.metrics.sharpeRatio,
+            annualizedReturn: backtestResult.metrics.totalReturn,
+            maxDrawdown: backtestResult.metrics.maxDrawdown,
+            alpha: backtestResult.metrics.alpha,
+            beta: backtestResult.metrics.beta
+        }
     };
-    onAddFactor(newFactor);
+
+    onAddPortfolio(newPortfolio);
+    
     // Reset
     setFormulaResult(null);
     setBacktestResult(null);
     setSelectedIds(new Set());
     setSectorNeutral(false);
     setStyleNeutral(false);
+    setProgress(0);
   };
 
   const chartData = backtestResult ? backtestResult.dates.map((date, i) => ({
@@ -110,7 +140,7 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddFactor 
       <div className="shrink-0">
         <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
           <FlaskConical className="text-pink-500" size={32} />
-          Multi-Factor Model Lab
+          Portfolio Backtest & Analyze
         </h1>
         <p className="text-slate-400 text-sm md:text-base">Construct portfolios using factor combinations, apply Barra optimization, and backtest.</p>
       </div>
@@ -276,9 +306,26 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddFactor 
                 </div>
             </div>
 
+            {/* Progress Bar */}
+            {loading && (
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg">
+                    <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-semibold text-slate-200">Optimizing Portfolio Weights & Backtesting...</span>
+                        <span className="text-sm font-mono text-pink-500">{progress}%</span>
+                    </div>
+                    <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                        <div 
+                            className="bg-gradient-to-r from-pink-600 to-rose-600 h-2.5 rounded-full transition-all duration-300 ease-out" 
+                            style={{ width: `${progress}%` }}
+                        ></div>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-2 text-center">Applying Barra risk factor residualization...</p>
+                </div>
+            )}
+
             {/* Result Area */}
             <div className="flex-1 min-h-[400px]">
-                {formulaResult && backtestResult ? (
+                {formulaResult && backtestResult && !loading ? (
                     <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         
                         {/* Header & Save */}
@@ -300,7 +347,7 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddFactor 
                                 className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors w-full sm:w-auto justify-center"
                             >
                                 <Save size={16} />
-                                Save Strategy
+                                Save to Portfolio Library
                             </button>
                         </div>
 
@@ -361,12 +408,14 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddFactor 
                         </div>
                     </div>
                 ) : (
-                    <div className="h-full bg-slate-900/30 border-2 border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-600 gap-4 p-8">
-                        <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center">
-                            <ArrowRight size={24} className="text-slate-600" />
+                    !loading && (
+                        <div className="h-full bg-slate-900/30 border-2 border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-600 gap-4 p-8">
+                            <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center">
+                                <ArrowRight size={24} className="text-slate-600" />
+                            </div>
+                            <p className="text-center">Select factors, configure Barra optimization, and run backtest.</p>
                         </div>
-                        <p className="text-center">Select factors, configure Barra optimization, and run backtest.</p>
-                    </div>
+                    )
                 )}
             </div>
         </div>

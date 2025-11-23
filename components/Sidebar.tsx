@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Pickaxe, BookOpen, LineChart, Settings, Database, Terminal, FlaskConical, X } from 'lucide-react';
+import { LayoutDashboard, Pickaxe, BookOpen, LineChart, Settings, Database, Terminal, FlaskConical, X, Briefcase } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -11,11 +11,12 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, onClose }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'mining', label: 'Factor Mining', icon: Pickaxe },
-    { id: 'lab', label: 'Factor Lab', icon: FlaskConical },
-    { id: 'library', label: 'Factor Library', icon: BookOpen },
     { id: 'data', label: 'Data Explorer', icon: Database },
-    { id: 'backtest', label: 'Backtest & Analyze', icon: LineChart },
+    { id: 'mining', label: 'Factor Mining', icon: Pickaxe },
+    { id: 'library', label: 'Factor Library', icon: BookOpen },
+    { id: 'single-backtest', label: 'Single Factor Analysis', icon: LineChart },
+    { id: 'portfolio-lab', label: 'Portfolio Backtest & Analyze', icon: FlaskConical },
+    { id: 'portfolio-lib', label: 'Portfolio Library', icon: Briefcase },
     { id: 'console', label: 'Python Console', icon: Terminal },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -66,7 +67,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, onCl
                     }`}
                   >
                     <Icon size={18} />
-                    <span className="font-medium text-sm">{item.label}</span>
+                    <span className="font-medium text-sm truncate">{item.label}</span>
                   </button>
                 </li>
               );

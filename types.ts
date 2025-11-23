@@ -28,6 +28,28 @@ export interface Factor {
   };
 }
 
+export interface Portfolio {
+  id: string;
+  name: string;
+  description: string;
+  createdAt: string;
+  strategy: string; // e.g. "Equal Weight", "Risk Parity"
+  factorIds: string[];
+  constraints?: {
+    sectorNeutral: boolean;
+    styleNeutral: boolean;
+    maxDrawdown?: string;
+    targetVol?: string;
+  };
+  performance: {
+    sharpe: number;
+    annualizedReturn: number;
+    maxDrawdown: number;
+    alpha: number;
+    beta: number;
+  };
+}
+
 export interface BacktestResult {
   dates: string[];
   portfolioValue: number[];
