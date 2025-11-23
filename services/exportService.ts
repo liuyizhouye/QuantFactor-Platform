@@ -1,4 +1,4 @@
-import { Factor, Portfolio } from '../types';
+import { Factor, Portfolio, FactorFrequency } from '../types';
 import JSZip from 'jszip';
 
 // Helper to download blob
@@ -13,8 +13,8 @@ const triggerDownload = (blob: Blob, filename: string) => {
     URL.revokeObjectURL(url);
 };
 
-// Generate Mock CSV Data
-const generateCSVData = (rows = 252) => {
+// Generate Mock Daily CSV Data (Low Freq)
+const generateDailyCSVData = (rows = 252) => {
     let csvContent = "date,open,high,low,close,volume\n";
     let price = 150.00;
     const now = new Date();
@@ -37,14 +37,54 @@ const generateCSVData = (rows = 252) => {
     return csvContent;
 };
 
+// Generate Mock Intraday CSV Data (High Freq - Minute Bars with Order Book)
+const generateIntradayCSVData = (minutes = 390) => {
+    // Header includes Microstructure data fields
+    let csvContent = "timestamp,open,high,low,close,volume,bid,ask,bid_size,ask_size\n";
+    let price = 150.00;
+    
+    // Start at 9:30 AM today
+    const startTime = new Date();
+    startTime.setHours(9, 30, 0, 0);
+    
+    for (let i = 0; i < minutes; i++) {
+        const time = new Date(startTime.getTime() + i * 60000); // Add minutes
+        // Format: YYYY-MM-DD HH:MM:SS
+        const timeStr = time.toISOString().replace('T', ' ').substring(0, 19);
+        
+        const change = (Math.random() - 0.5) * 0.002; // Smaller volatility for minutes
+        const open = price;
+        const close = price * (1 + change);
+        const high = Math.max(open, close) + 0.02;
+        const low = Math.min(open, close) - 0.02;
+        const volume = Math.floor(1000 + Math.random() * 5000);
+        
+        // Microstructure Simulation
+        const spread = 0.01 + Math.random() * 0.02;
+        const mid = close;
+        const bid = parseFloat((mid - spread/2).toFixed(2));
+        const ask = parseFloat((mid + spread/2).toFixed(2));
+        const bidSize = Math.floor(100 + Math.random() * 500);
+        const askSize = Math.floor(100 + Math.random() * 500);
+        
+        csvContent += `${timeStr},${open.toFixed(2)},${high.toFixed(2)},${low.toFixed(2)},${close.toFixed(2)},${volume},${bid},${ask},${bidSize},${askSize}\n`;
+        price = close;
+    }
+    return csvContent;
+};
+
 // --- FACTOR EXPORT ---
 
 export const exportFactorPackage = async (factor: Factor) => {
     const zip = new JSZip();
+    const isHighFreq = factor.frequency === FactorFrequency.HIGH_FREQ;
     
-    // 1. Add Data
-    const csvData = generateCSVData(252);
-    zip.file("market_data.csv", csvData);
+    // 1. Add Data (Context Aware)
+    const csvData = isHighFreq ? generateIntradayCSVData(390 * 3) : generateDailyCSVData(252 * 2); // 3 days for HF, 2 years for LF
+    const dataFileName = isHighFreq ? "intraday_data.csv" : "market_data.csv";
+    const indexCol = isHighFreq ? "timestamp" : "date";
+    
+    zip.file(dataFileName, csvData);
 
     // 2. Add Python Verification Script
     const pythonScript = `
@@ -54,14 +94,15 @@ import numpy as np
 # ---------------------------------------------------------
 # QuantFactor AI - Factor Verification Script
 # Factor: ${factor.name}
-# ID: ${factor.id}
+# Type: ${isHighFreq ? 'High Frequency (Intraday)' : 'Low Frequency (Daily)'}
 # ---------------------------------------------------------
 
 def load_data(filepath):
     print(f"Loading data from {filepath}...")
     df = pd.read_csv(filepath)
-    df['date'] = pd.to_datetime(df['date'])
-    df.set_index('date', inplace=True)
+    # Parse Index correctly based on frequency
+    df['${indexCol}'] = pd.to_datetime(df['${indexCol}'])
+    df.set_index('${indexCol}', inplace=True)
     return df
 
 def calculate_factor(df):
@@ -73,19 +114,14 @@ def calculate_factor(df):
     """
     print("Calculating factor logic...")
     
-    # Safety copy to prevent modifying original data inplace if not needed
+    # Safety copy
     data = df.copy()
     
     try:
-        # The formula is expected to operate on 'df' columns
-        # We execute it in a restricted local scope where 'df' is available
+        # For High Frequency factors, logic often involves order book columns
+        # (bid, ask, bid_size, ask_size) which are present in the CSV.
         
-        # NOTE: For complex multi-line formulas, this is a simplified representation.
-        # In a real system, we would transpiler the AST. 
-        # Here we substitute 'df' usage if necessary or assume standard pandas syntax.
-        
-        # Direct execution of the formula string assuming it returns a Series
-        # e.g. "df.close.pct_change(5)"
+        # Execute formula
         factor_values = ${factor.formula}
         
         return factor_values
@@ -94,8 +130,8 @@ def calculate_factor(df):
         return pd.Series(np.nan, index=df.index)
 
 def analyze_performance(df, factor_col):
-    # Simple IC (Information Coefficient) calculation
-    # Using next day return as target
+    # Calculate Forward Returns for IC
+    # LF: Next Day Return, HF: Next Minute Return
     df['next_ret'] = df['close'].shift(-1) / df['close'] - 1
     
     valid_data = df[[factor_col, 'next_ret']].dropna()
@@ -104,20 +140,25 @@ def analyze_performance(df, factor_col):
     print("-" * 30)
     print(f"Verification Metrics")
     print("-" * 30)
+    print(f"Horizon: {'1-Minute' if isHighFreq else '1-Day'}")
     print(f"Information Coefficient (IC): {ic:.4f}")
     print(f"Data Points: {len(valid_data)}")
     print("-" * 30)
 
 if __name__ == "__main__":
     # 1. Load the raw data included in this package
-    df = load_data('market_data.csv')
+    df = load_data('${dataFileName}')
     
     # 2. Calculate the factor
     df['factor_value'] = calculate_factor(df)
     
     # 3. Output results
     print("\\nSample Factor Values (Head):")
-    print(df[['close', 'factor_value']].head())
+    cols_to_show = ['close', 'factor_value']
+    if 'bid_size' in df.columns:
+        cols_to_show = ['close', 'bid_size', 'ask_size', 'factor_value']
+        
+    print(df[cols_to_show].head())
     
     # 4. Verify Performance
     analyze_performance(df, 'factor_value')
@@ -143,14 +184,14 @@ if __name__ == "__main__":
 export const exportPortfolioPackage = async (portfolio: Portfolio, allFactors: Factor[]) => {
     const zip = new JSZip();
 
-    // 1. Add Data
-    const csvData = generateCSVData(500); // Longer history for portfolios
+    // 1. Add Data (Portfolios assume Daily for now, but could be adapted)
+    const csvData = generateDailyCSVData(500); 
     zip.file("market_data.csv", csvData);
 
     // 2. Identify used factors
     const usedFactors = allFactors.filter(f => portfolio.factorIds.includes(f.id));
     
-    // 3. Generate Python Script for Portfolio Construction
+    // 3. Generate Python Script
     let factorCalculations = "";
     usedFactors.forEach((f, i) => {
         factorCalculations += `
@@ -216,8 +257,6 @@ def run_portfolio_strategy():
 
     # 3. Apply Barra Constraints (Simulated)
     # Constraints: ${JSON.stringify(portfolio.constraints || {})}
-    # In a full production script, this would involve an optimizer (cvxpy)
-    # and a covariance matrix. Here we apply simple filters.
     
     final_weights = weights.copy()
     
@@ -226,8 +265,6 @@ def run_portfolio_strategy():
     portfolio_signal = (factors * final_weights).sum(axis=1)
     
     # 5. Backtest / Performance
-    # Assume we go Long the portfolio signal
-    # Simple strategy: Position size proportional to signal strength
     next_ret = df['close'].shift(-1) / df['close'] - 1
     strategy_ret = portfolio_signal.shift(1) * next_ret
     

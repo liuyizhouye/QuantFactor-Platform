@@ -23,7 +23,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, onCl
       items: [
         { id: 'mining-lf', label: 'Alpha Mining', icon: Pickaxe },
         { id: 'library-lf', label: 'Alpha Library', icon: BookOpen },
-        { id: 'backtest-lf', label: 'Alpha Backtest', icon: LineChart },
+        { id: 'portfolio-lf', label: 'Alpha Portfolio', icon: FlaskConical },
+        { id: 'backtest-lf', label: 'Single Factor Backtest', icon: LineChart },
       ]
     },
     {
@@ -31,13 +32,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, onCl
       items: [
         { id: 'mining-hf', label: 'HFT Mining', icon: Zap },
         { id: 'library-hf', label: 'HFT Library', icon: Activity },
-        { id: 'backtest-hf', label: 'HFT Backtest', icon: LineChart },
+        { id: 'portfolio-hf', label: 'HFT Portfolio', icon: FlaskConical },
+        { id: 'backtest-hf', label: 'HFT Microstructure', icon: LineChart },
       ]
     },
     {
       title: "Portfolio Management",
       items: [
-        { id: 'portfolio-lab', label: 'Portfolio Optimize', icon: FlaskConical },
         { id: 'portfolio-lib', label: 'Portfolio Library', icon: Briefcase },
       ]
     },
@@ -95,7 +96,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, onCl
                       <li key={item.id}>
                         <button
                           onClick={() => handleTabClick(item.id)}
-                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-75 ${
+                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-100 ${
                             isActive 
                               ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20 shadow-sm' 
                               : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'

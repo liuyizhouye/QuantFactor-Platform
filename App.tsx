@@ -103,6 +103,9 @@ const App: React.FC = () => {
           <div className={`h-full z-10 relative ${activeTab === 'library-lf' ? 'block' : 'hidden'}`}>
              <LibraryView factors={factors} onDelete={handleDeleteFactor} targetFrequency={FactorFrequency.LOW_FREQ} />
           </div>
+          <div className={`h-full z-10 relative ${activeTab === 'portfolio-lf' ? 'block' : 'hidden'}`}>
+             <CombinationView factors={factors} onAddPortfolio={handleAddPortfolio} targetFrequency={FactorFrequency.LOW_FREQ} />
+          </div>
           <div className={`h-full z-10 relative ${activeTab === 'backtest-lf' ? 'block' : 'hidden'}`}>
              <BacktestView factors={factors} targetFrequency={FactorFrequency.LOW_FREQ} />
           </div>
@@ -114,16 +117,15 @@ const App: React.FC = () => {
           <div className={`h-full z-10 relative ${activeTab === 'library-hf' ? 'block' : 'hidden'}`}>
              <LibraryView factors={factors} onDelete={handleDeleteFactor} targetFrequency={FactorFrequency.HIGH_FREQ} />
           </div>
+          <div className={`h-full z-10 relative ${activeTab === 'portfolio-hf' ? 'block' : 'hidden'}`}>
+             <CombinationView factors={factors} onAddPortfolio={handleAddPortfolio} targetFrequency={FactorFrequency.HIGH_FREQ} />
+          </div>
           <div className={`h-full z-10 relative ${activeTab === 'backtest-hf' ? 'block' : 'hidden'}`}>
              <BacktestView factors={factors} targetFrequency={FactorFrequency.HIGH_FREQ} />
           </div>
 
 
-          {/* Portfolio & System */}
-          <div className={`h-full z-10 relative ${activeTab === 'portfolio-lab' ? 'block' : 'hidden'}`}>
-             <CombinationView factors={factors} onAddPortfolio={handleAddPortfolio} />
-          </div>
-
+          {/* Shared Library & System */}
           <div className={`h-full z-10 relative ${activeTab === 'portfolio-lib' ? 'block' : 'hidden'}`}>
              <PortfolioLibraryView portfolios={portfolios} onDelete={handleDeletePortfolio} factors={factors} />
           </div>

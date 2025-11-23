@@ -1,4 +1,4 @@
-import { BacktestResult, ChartDataPoint } from "../types";
+import { BacktestResult, ChartDataPoint, FactorFrequency } from "../types";
 
 // Generate a random walk for stock prices
 export const generateMarketData = (days: number = 252) => {
@@ -117,8 +117,10 @@ export const runHighFreqBacktest = (): BacktestResult => {
 
 
 // Simulate a Multi-Factor Portfolio backtest (Barra Optimized)
-export const runMultiFactorBacktest = (): BacktestResult => {
-  const days = 252;
+export const runMultiFactorBacktest = (frequency: FactorFrequency = FactorFrequency.LOW_FREQ): BacktestResult => {
+  const isHighFreq = frequency === FactorFrequency.HIGH_FREQ;
+  const periods = isHighFreq ? 390 : 252; // Minutes vs Days
+  
   const dates: string[] = [];
   const portfolioValue: number[] = [];
   const benchmarkValue: number[] = [];
@@ -127,16 +129,29 @@ export const runMultiFactorBacktest = (): BacktestResult => {
   let bVal = 100000;
   
   const now = new Date();
+  // For HF setup
+  const startObj = new Date();
+  startObj.setHours(9, 30, 0, 0);
   
-  for (let i = 0; i < days; i++) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - (days - i));
-    dates.push(date.toISOString().split('T')[0]);
+  for (let i = 0; i < periods; i++) {
+    let dateStr = "";
+    if (isHighFreq) {
+        const date = new Date(startObj.getTime() + i * 60000);
+        dateStr = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    } else {
+        const date = new Date(now);
+        date.setDate(date.getDate() - (periods - i));
+        dateStr = date.toISOString().split('T')[0];
+    }
+    dates.push(dateStr);
     
-    // Simulate Optimized Portfolio - Smoother returns, better alpha
-    const marketReturn = (Math.random() - 0.45) * 0.02; 
-    // Alpha is more consistent due to diversification
-    const alpha = (Math.random() - 0.30) * 0.012; 
+    // Simulation Logic
+    const vol = isHighFreq ? 0.0005 : 0.015;
+    const marketReturn = (Math.random() - 0.48) * vol; 
+    
+    // Multi-factor alpha is smoother and more positive than single factor
+    const alphaMean = isHighFreq ? 0.0002 : 0.0008;
+    const alpha = (Math.random() - 0.35) * (vol * 0.6) + alphaMean; 
     
     pVal = pVal * (1 + marketReturn + alpha);
     bVal = bVal * (1 + marketReturn);
@@ -153,11 +168,13 @@ export const runMultiFactorBacktest = (): BacktestResult => {
     benchmarkValue,
     metrics: {
       totalReturn,
-      sharpeRatio: 2.5 + Math.random(), // Higher Sharpe for multi-factor
-      maxDrawdown: -0.08 + (Math.random() * 0.03), // Lower Drawdown
-      winRate: 0.65,
-      alpha: 0.15,
-      beta: 0.10 // Market neutral-ish
+      sharpeRatio: isHighFreq ? 4.5 + Math.random() : 2.5 + Math.random(), // HF Basket often has very high Sharpe
+      maxDrawdown: isHighFreq ? -0.01 : -0.08 + (Math.random() * 0.03), 
+      winRate: isHighFreq ? 0.62 : 0.58,
+      alpha: isHighFreq ? undefined : 0.15, // Only relevant for LF
+      beta: isHighFreq ? 0.02 : 0.10, // Market neutral-ish
+      fillRate: isHighFreq ? 0.98 : undefined,
+      totalTrades: isHighFreq ? 1250 : undefined
     }
   };
 };

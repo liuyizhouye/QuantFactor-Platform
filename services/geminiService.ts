@@ -75,36 +75,54 @@ interface RiskConfig {
     styleNeutral: boolean;
     maxDrawdown?: string;
     targetVol?: string;
+    executionStrategy?: string; // HF specific
+    maxInventory?: string; // HF specific
 }
 
 export const generateFactorCombination = async (
   factors: Factor[],
   goal: string,
-  riskConfig?: RiskConfig
+  riskConfig: RiskConfig,
+  frequency: FactorFrequency
 ): Promise<{ name: string; description: string; formula: string; category: string; logic_explanation: string }> => {
   if (!apiKey) throw new Error("API Key not found");
 
   const modelId = 'gemini-2.5-flash';
+  const isHighFreq = frequency === FactorFrequency.HIGH_FREQ;
   
   const factorsContext = factors.map(f => `- Name: ${f.name}\n  Formula: ${f.formula}\n  Description: ${f.description}`).join('\n\n');
 
-  const riskPrompt = riskConfig ? `
-    Risk Management & Barra Model Constraints:
-    - Barra Sector Neutrality: ${riskConfig.sectorNeutral ? "REQUIRED (Orthogonalize against sectors)" : "None"}
-    - Barra Style Neutrality: ${riskConfig.styleNeutral ? "REQUIRED (Orthogonalize against common style factors like Size, Value)" : "None"}
-    - Max Drawdown Limit: ${riskConfig.maxDrawdown ? riskConfig.maxDrawdown + "%" : "None"}
-    - Target Volatility: ${riskConfig.targetVol ? riskConfig.targetVol + "%" : "None"}
-  ` : "";
+  let configPrompt = "";
+  if (isHighFreq) {
+      configPrompt = `
+      HFT Execution & Risk Config:
+      - Execution Strategy: ${riskConfig.executionStrategy || "Standard"}
+      - Max Inventory Constraint: ${riskConfig.maxInventory || "Unlimited"}
+      
+      Generate Python logic that combines these signals into a 'buy_signal' and 'sell_signal' (-1 to 1). 
+      Include logic that checks 'current_inventory' against max_inventory before generating a signal.
+      `;
+  } else {
+      configPrompt = `
+      Risk Management & Barra Model Constraints:
+      - Barra Sector Neutrality: ${riskConfig.sectorNeutral ? "REQUIRED (Orthogonalize against sectors)" : "None"}
+      - Barra Style Neutrality: ${riskConfig.styleNeutral ? "REQUIRED (Orthogonalize against common style factors like Size, Value)" : "None"}
+      - Max Drawdown Limit: ${riskConfig.maxDrawdown ? riskConfig.maxDrawdown + "%" : "None"}
+      - Target Volatility: ${riskConfig.targetVol ? riskConfig.targetVol + "%" : "None"}
+      `;
+  }
 
   const systemInstruction = `
-    You are a Quant Expert. Combine the provided alpha factors into a new composite factor.
+    You are a Quant Expert. Combine the provided alpha factors into a new composite strategy.
     
-    CRITICAL: You must strictly adhere to the Risk Management & Barra Model constraints provided.
-    - If "Sector Neutrality" or "Style Neutrality" is required, your formula MUST show the logic for residualizing the factor (e.g., 'resid = factor - (beta * market_factor)').
-    - If volatility or drawdown limits are set, include logic for position sizing or volatility targeting (e.g., 'weight = target_vol / realized_vol').
+    Context: ${frequency} Strategy.
     
-    Ensure mathematical validity in the combination (e.g., z-scoring before adding, handling different scales).
-    Output strictly in JSON.
+    CRITICAL: You must strictly adhere to the constraints provided.
+    ${isHighFreq 
+        ? "- For HFT: Logic MUST deal with order execution, inventory limits, and signal aggregation." 
+        : "- For Low Freq: Logic MUST deal with portfolio weights, residualization (Barra), and risk parity."}
+    
+    Ensure mathematical validity. Output strictly in JSON.
   `;
 
   const userPrompt = `
@@ -113,15 +131,15 @@ export const generateFactorCombination = async (
 
     User Goal/Strategy: "${goal || "Create an optimal weighted combination of these factors."}"
 
-    ${riskPrompt}
+    ${configPrompt}
 
-    Generate a new composite factor.
+    Generate a new composite strategy.
     Return JSON:
-    - name: New factor name (include 'Risk-Adj' or 'Neutral' if applicable).
+    - name: New portfolio name.
     - category: The dominant category or "Multi-factor".
     - description: One sentence description of the combination strategy and risk controls.
-    - formula: Python/Pandas code for the combination. Assume input factors are available as variables. Show steps for neutralization/risk control.
-    - logic_explanation: Why this combination works, how risk is managed, and the benefit of Barra neutralization if applied.
+    - formula: Python/Pandas code for the combination.
+    - logic_explanation: Why this combination works and how constraints are applied.
   `;
 
   try {
