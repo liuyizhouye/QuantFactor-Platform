@@ -2,18 +2,20 @@
 import React, { useState } from 'react';
 import { generateFactorSuggestion } from '../services/geminiService';
 import { FactorFrequency, Factor, FactorCategory } from '../types';
-import { Sparkles, ArrowRight, Save, Copy, Loader2, Code2, BrainCircuit, AlertCircle } from 'lucide-react';
+import { Sparkles, ArrowRight, Save, Copy, Loader2, Code2, BrainCircuit, AlertCircle, Zap, Pickaxe } from 'lucide-react';
 
 interface MiningViewProps {
   onAddFactor: (factor: Factor) => void;
+  targetFrequency: FactorFrequency;
 }
 
-const MiningView: React.FC<MiningViewProps> = ({ onAddFactor }) => {
+const MiningView: React.FC<MiningViewProps> = ({ onAddFactor, targetFrequency }) => {
   const [prompt, setPrompt] = useState('');
-  const [frequency, setFrequency] = useState<FactorFrequency>(FactorFrequency.LOW_FREQ);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{name: string, formula: string, description: string, category: string, logic_explanation: string} | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const isHighFreq = targetFrequency === FactorFrequency.HIGH_FREQ;
 
   const validateInput = (input: string): boolean => {
     if (!input.trim()) {
@@ -46,7 +48,7 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor }) => {
     
     try {
       const sanitizedPrompt = prompt.replace(/[<>]/g, '');
-      const data = await generateFactorSuggestion(sanitizedPrompt, frequency);
+      const data = await generateFactorSuggestion(sanitizedPrompt, targetFrequency);
       setResult(data);
     } catch (error) {
       console.error("Failed to mine factor", error);
@@ -63,7 +65,7 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor }) => {
       name: result.name,
       description: result.description,
       formula: result.formula,
-      frequency,
+      frequency: targetFrequency,
       category: result.category as FactorCategory,
       createdAt: new Date().toISOString(),
       performance: {
@@ -83,32 +85,27 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor }) => {
     <div className="h-full overflow-y-auto flex flex-col gap-6 p-4 md:p-8 max-w-6xl mx-auto pb-20 md:pb-8">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
-          <BrainCircuit className="text-purple-500" size={32} />
-          AI Factor Mining
+          {isHighFreq ? <Zap className="text-orange-500" size={32} /> : <Pickaxe className="text-blue-500" size={32} />}
+          {isHighFreq ? 'HFT Factor Mining' : 'Alpha Factor Mining'}
         </h1>
-        <p className="text-slate-400 text-sm md:text-base">Describe a market hypothesis, and the AI will formalize it into a mathematical factor.</p>
+        <p className="text-slate-400 text-sm md:text-base">
+          {isHighFreq 
+            ? "Discover high-frequency microstructure signals using order book dynamics and tick data."
+            : "Generate low-frequency alpha factors based on daily price action and fundamental logic."}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 min-h-0">
         {/* Input Section */}
         <div className="col-span-1 flex flex-col gap-4">
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-6 shadow-xl flex flex-col gap-4">
-            <div>
-              <label className="text-sm font-semibold text-slate-300 mb-2 block">Data Frequency</label>
-              <div className="flex p-1 bg-slate-950 rounded-lg border border-slate-800">
-                <button 
-                  onClick={() => setFrequency(FactorFrequency.LOW_FREQ)}
-                  className={`flex-1 py-2 text-xs font-medium rounded-md transition-colors ${frequency === FactorFrequency.LOW_FREQ ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
-                >
-                  Daily (Low Freq)
-                </button>
-                <button 
-                  onClick={() => setFrequency(FactorFrequency.HIGH_FREQ)}
-                  className={`flex-1 py-2 text-xs font-medium rounded-md transition-colors ${frequency === FactorFrequency.HIGH_FREQ ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
-                >
-                  Intraday (High Freq)
-                </button>
-              </div>
+            
+            {/* Status Indicator */}
+            <div className="flex items-center gap-2 p-3 bg-slate-950 rounded-lg border border-slate-800">
+               <div className={`w-2 h-2 rounded-full ${isHighFreq ? 'bg-orange-500 animate-pulse' : 'bg-blue-500'}`}></div>
+               <span className="text-xs font-mono text-slate-400 uppercase">
+                  Mode: <span className="text-slate-200 font-bold">{isHighFreq ? 'Intraday (Microstructure)' : 'Daily (Interday)'}</span>
+               </span>
             </div>
 
             <div>
@@ -119,7 +116,9 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor }) => {
                     setPrompt(e.target.value);
                     if (error) setError(null);
                 }}
-                placeholder="e.g. Find stocks with high volume but low price movement, suggesting accumulation..."
+                placeholder={isHighFreq 
+                    ? "e.g. Detect order book imbalance spikes 500ms before price jumps..." 
+                    : "e.g. Find stocks with decreasing volume on down days (accumulation)..."}
                 className={`w-full h-32 md:h-40 bg-slate-950 border rounded-lg p-4 text-slate-200 focus:outline-none focus:ring-2 placeholder:text-slate-600 resize-none text-sm font-sans ${
                     error 
                     ? 'border-red-500/50 focus:ring-red-500/50' 
@@ -137,7 +136,11 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor }) => {
             <button
               onClick={handleMine}
               disabled={loading || !prompt}
-              className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-lg shadow-lg shadow-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
+              className={`w-full py-3 text-white font-semibold rounded-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all ${
+                  isHighFreq 
+                  ? 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 shadow-orange-900/20'
+                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-900/20'
+              }`}
             >
               {loading ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
               Generate Factor
@@ -147,15 +150,19 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor }) => {
           <div className="bg-slate-900/50 border border-slate-800/50 rounded-xl p-4 md:p-6 hidden md:block">
             <h3 className="text-sm font-semibold text-slate-400 mb-3">Example Prompts</h3>
             <ul className="space-y-3 text-sm text-slate-500">
-              <li className="cursor-pointer hover:text-blue-400 transition-colors" onClick={() => { setPrompt("Reversal strategy based on RSI divergence over 14 days."); setError(null); }}>
-                • RSI divergence reversal
-              </li>
-              <li className="cursor-pointer hover:text-blue-400 transition-colors" onClick={() => { setPrompt("Stocks near 52-week high with decreasing volatility."); setError(null); }}>
-                • Low Volatility Breakout
-              </li>
-              <li className="cursor-pointer hover:text-blue-400 transition-colors" onClick={() => { setPrompt("High frequency order book imbalance predicting next tick."); setError(null); }}>
-                • Order Book Imbalance (HF)
-              </li>
+              {isHighFreq ? (
+                <>
+                  <li className="cursor-pointer hover:text-orange-400 transition-colors" onClick={() => setPrompt("Order book imbalance delta predicting next tick direction.")}>• Order Flow Imbalance</li>
+                  <li className="cursor-pointer hover:text-orange-400 transition-colors" onClick={() => setPrompt("Volume Weighted Average Price (VWAP) reversion on 1-min bars.")}>• VWAP Mean Reversion</li>
+                  <li className="cursor-pointer hover:text-orange-400 transition-colors" onClick={() => setPrompt("Bid-Ask spread expansion during high volatility events.")}>• Spread Arbitrage</li>
+                </>
+              ) : (
+                 <>
+                  <li className="cursor-pointer hover:text-blue-400 transition-colors" onClick={() => setPrompt("Reversal strategy based on RSI divergence over 14 days.")}>• RSI divergence reversal</li>
+                  <li className="cursor-pointer hover:text-blue-400 transition-colors" onClick={() => setPrompt("Stocks near 52-week high with decreasing volatility.")}>• Low Volatility Breakout</li>
+                  <li className="cursor-pointer hover:text-blue-400 transition-colors" onClick={() => setPrompt("High momentum coupled with fundamental value growth.")}>• Growth at Reasonable Price</li>
+                </>
+              )}
             </ul>
           </div>
         </div>

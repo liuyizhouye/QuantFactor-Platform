@@ -1,23 +1,28 @@
 
 import React, { useState } from 'react';
-import { Factor, FactorCategory } from '../types';
-import { Trash2, Edit, Code, Filter, X, Download, FileText } from 'lucide-react';
+import { Factor, FactorCategory, FactorFrequency } from '../types';
+import { Trash2, Edit, Code, Filter, X, Download, FileText, Zap, BookOpen } from 'lucide-react';
 import { exportFactorPackage } from '../services/exportService';
 
 interface LibraryViewProps {
   factors: Factor[];
   onDelete: (id: string) => void;
+  targetFrequency: FactorFrequency;
 }
 
-const LibraryView: React.FC<LibraryViewProps> = ({ factors, onDelete }) => {
+const LibraryView: React.FC<LibraryViewProps> = ({ factors, onDelete, targetFrequency }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [exportingId, setExportingId] = useState<string | null>(null);
 
+  const isHighFreq = targetFrequency === FactorFrequency.HIGH_FREQ;
+
   const categories = ['All', ...Object.values(FactorCategory)];
 
+  // Filter by frequency FIRST, then by selected category
+  const visibleFactors = factors.filter(f => f.frequency === targetFrequency);
   const filteredFactors = selectedCategory === 'All' 
-    ? factors 
-    : factors.filter(f => f.category === selectedCategory);
+    ? visibleFactors 
+    : visibleFactors.filter(f => f.category === selectedCategory);
 
   const handleDelete = (id: string) => {
     if (window.confirm("Are you sure you want to delete this factor? This action cannot be undone.")) {
@@ -41,19 +46,22 @@ const LibraryView: React.FC<LibraryViewProps> = ({ factors, onDelete }) => {
     <div className="h-full overflow-y-auto p-8 max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
             <div>
-                <h1 className="text-2xl font-bold text-white">Factor Library</h1>
-                <p className="text-slate-400">Manage your proprietary algorithms</p>
+                <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                    {isHighFreq ? <Zap className="text-orange-500" /> : <BookOpen className="text-blue-500" />}
+                    {isHighFreq ? 'HFT Factor Library' : 'Alpha Factor Library'}
+                </h1>
+                <p className="text-slate-400">Manage your proprietary {isHighFreq ? 'high-frequency' : 'low-frequency'} algorithms</p>
             </div>
             <div className="px-4 py-2 bg-slate-800 rounded-lg border border-slate-700">
                 <span className="text-sm text-slate-400">
-                    Showing <span className="text-white font-bold">{filteredFactors.length}</span> of {factors.length}
+                    Showing <span className="text-white font-bold">{filteredFactors.length}</span> of {visibleFactors.length}
                 </span>
             </div>
         </div>
 
         {/* Filter Bar */}
-        <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-400 mr-2 shrink-0">
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-400 shrink-0">
                 <Filter size={14} />
                 <span className="text-xs font-medium uppercase tracking-wider">Filter By</span>
             </div>
@@ -76,7 +84,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({ factors, onDelete }) => {
             {selectedCategory !== 'All' && (
                  <button 
                     onClick={() => setSelectedCategory('All')}
-                    className="ml-auto flex items-center gap-1 text-xs text-slate-500 hover:text-white px-2"
+                    className="flex items-center gap-1 text-xs text-slate-500 hover:text-white px-3 py-1 bg-slate-800/50 rounded-full hover:bg-slate-800 border border-transparent hover:border-slate-700 transition-colors"
                 >
                     <X size={12} /> Clear
                 </button>
@@ -86,8 +94,8 @@ const LibraryView: React.FC<LibraryViewProps> = ({ factors, onDelete }) => {
         <div className="grid grid-cols-1 gap-4 pb-20">
             {filteredFactors.length === 0 ? (
                 <div className="text-center py-20 text-slate-500 bg-slate-900 rounded-xl border border-dashed border-slate-800">
-                    {factors.length === 0 
-                        ? "No factors saved yet. Go to Mining to generate some." 
+                    {visibleFactors.length === 0 
+                        ? `No ${isHighFreq ? 'HFT' : 'Alpha'} factors saved yet. Go to Mining to generate some.` 
                         : `No factors found in category "${selectedCategory}".`}
                 </div>
             ) : (
@@ -99,9 +107,6 @@ const LibraryView: React.FC<LibraryViewProps> = ({ factors, onDelete }) => {
                                     <h3 className="text-xl font-bold text-slate-100">{factor.name}</h3>
                                     <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700">
                                         {factor.category}
-                                    </span>
-                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${factor.frequency.includes('High') ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>
-                                        {factor.frequency.includes('High') ? 'HF' : 'LF'}
                                     </span>
                                 </div>
                                 <p className="text-slate-400 text-sm max-w-2xl">{factor.description}</p>
@@ -141,12 +146,15 @@ const LibraryView: React.FC<LibraryViewProps> = ({ factors, onDelete }) => {
                                 <span className="text-slate-500 mr-2">Calculated:</span>
                                 <span className="text-slate-300">{new Date(factor.createdAt).toLocaleDateString()}</span>
                              </div>
+                             {/* Show different metrics based on frequency if available, currently just Sharpe/IC */}
                              {factor.performance && (
-                                 <div>
-                                     <span className="text-slate-500 mr-2">Last Sharpe:</span>
-                                     <span className={`font-mono font-bold ${factor.performance.sharpe > 1 ? 'text-emerald-400' : 'text-slate-300'}`}>
-                                         {factor.performance.sharpe.toFixed(2)}
-                                     </span>
+                                 <div className="flex gap-4">
+                                     <div>
+                                        <span className="text-slate-500 mr-2">Sharpe:</span>
+                                        <span className={`font-mono font-bold ${factor.performance.sharpe > 1 ? 'text-emerald-400' : 'text-slate-300'}`}>
+                                            {factor.performance.sharpe.toFixed(2)}
+                                        </span>
+                                     </div>
                                  </div>
                              )}
                         </div>

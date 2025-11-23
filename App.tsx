@@ -42,7 +42,8 @@ const App: React.FC = () => {
 
   const handleAddFactor = (factor: Factor) => {
     setFactors(prev => [factor, ...prev]);
-    setActiveTab('library');
+    // Redirect to the appropriate library based on freq
+    setActiveTab(factor.frequency === FactorFrequency.HIGH_FREQ ? 'library-hf' : 'library-lf');
   };
 
   const handleAddPortfolio = (portfolio: Portfolio) => {
@@ -90,33 +91,41 @@ const App: React.FC = () => {
               }}>
           </div>
           
-          {/* 
-            View State Persistence:
-            We render all views but hide the inactive ones. 
-            This preserves input state when switching tabs.
-          */}
+          {/* Dashboard */}
           <div className={`h-full z-10 relative ${activeTab === 'dashboard' ? 'block' : 'hidden'}`}>
              <Dashboard factors={factors} />
           </div>
           
-          <div className={`h-full z-10 relative ${activeTab === 'mining' ? 'block' : 'hidden'}`}>
-             <MiningView onAddFactor={handleAddFactor} />
+          {/* --- LOW FREQUENCY MODULES --- */}
+          <div className={`h-full z-10 relative ${activeTab === 'mining-lf' ? 'block' : 'hidden'}`}>
+             <MiningView onAddFactor={handleAddFactor} targetFrequency={FactorFrequency.LOW_FREQ} />
+          </div>
+          <div className={`h-full z-10 relative ${activeTab === 'library-lf' ? 'block' : 'hidden'}`}>
+             <LibraryView factors={factors} onDelete={handleDeleteFactor} targetFrequency={FactorFrequency.LOW_FREQ} />
+          </div>
+          <div className={`h-full z-10 relative ${activeTab === 'backtest-lf' ? 'block' : 'hidden'}`}>
+             <BacktestView factors={factors} targetFrequency={FactorFrequency.LOW_FREQ} />
           </div>
 
+          {/* --- HIGH FREQUENCY MODULES --- */}
+          <div className={`h-full z-10 relative ${activeTab === 'mining-hf' ? 'block' : 'hidden'}`}>
+             <MiningView onAddFactor={handleAddFactor} targetFrequency={FactorFrequency.HIGH_FREQ} />
+          </div>
+          <div className={`h-full z-10 relative ${activeTab === 'library-hf' ? 'block' : 'hidden'}`}>
+             <LibraryView factors={factors} onDelete={handleDeleteFactor} targetFrequency={FactorFrequency.HIGH_FREQ} />
+          </div>
+          <div className={`h-full z-10 relative ${activeTab === 'backtest-hf' ? 'block' : 'hidden'}`}>
+             <BacktestView factors={factors} targetFrequency={FactorFrequency.HIGH_FREQ} />
+          </div>
+
+
+          {/* Portfolio & System */}
           <div className={`h-full z-10 relative ${activeTab === 'portfolio-lab' ? 'block' : 'hidden'}`}>
              <CombinationView factors={factors} onAddPortfolio={handleAddPortfolio} />
           </div>
 
-          <div className={`h-full z-10 relative ${activeTab === 'library' ? 'block' : 'hidden'}`}>
-             <LibraryView factors={factors} onDelete={handleDeleteFactor} />
-          </div>
-          
           <div className={`h-full z-10 relative ${activeTab === 'portfolio-lib' ? 'block' : 'hidden'}`}>
              <PortfolioLibraryView portfolios={portfolios} onDelete={handleDeletePortfolio} factors={factors} />
-          </div>
-
-          <div className={`h-full z-10 relative ${activeTab === 'single-backtest' ? 'block' : 'hidden'}`}>
-             <BacktestView factors={factors} />
           </div>
 
           <div className={`h-full z-10 relative ${activeTab === 'console' ? 'block' : 'hidden'}`}>

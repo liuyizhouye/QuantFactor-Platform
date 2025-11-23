@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Pickaxe, BookOpen, LineChart, Settings, Database, Terminal, FlaskConical, X, Briefcase } from 'lucide-react';
+import { LayoutDashboard, Pickaxe, BookOpen, LineChart, Settings, Database, Terminal, FlaskConical, X, Briefcase, Zap, Activity } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -19,17 +19,25 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, onCl
       ]
     },
     {
-      title: "Factor Research",
+      title: "Alpha Research (Daily)",
       items: [
-        { id: 'mining', label: 'Factor Mining', icon: Pickaxe },
-        { id: 'library', label: 'Factor Library', icon: BookOpen },
-        { id: 'single-backtest', label: 'Single Factor Analysis', icon: LineChart },
+        { id: 'mining-lf', label: 'Alpha Mining', icon: Pickaxe },
+        { id: 'library-lf', label: 'Alpha Library', icon: BookOpen },
+        { id: 'backtest-lf', label: 'Alpha Backtest', icon: LineChart },
+      ]
+    },
+    {
+      title: "HFT Research (Intraday)",
+      items: [
+        { id: 'mining-hf', label: 'HFT Mining', icon: Zap },
+        { id: 'library-hf', label: 'HFT Library', icon: Activity },
+        { id: 'backtest-hf', label: 'HFT Backtest', icon: LineChart },
       ]
     },
     {
       title: "Portfolio Management",
       items: [
-        { id: 'portfolio-lab', label: 'Portfolio Backtest', icon: FlaskConical },
+        { id: 'portfolio-lab', label: 'Portfolio Optimize', icon: FlaskConical },
         { id: 'portfolio-lib', label: 'Portfolio Library', icon: Briefcase },
       ]
     },
@@ -87,7 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, onCl
                       <li key={item.id}>
                         <button
                           onClick={() => handleTabClick(item.id)}
-                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-100 ${
+                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-75 ${
                             isActive 
                               ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20 shadow-sm' 
                               : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'

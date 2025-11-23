@@ -59,8 +59,13 @@ export interface BacktestResult {
     sharpeRatio: number;
     maxDrawdown: number;
     winRate: number;
-    alpha: number;
-    beta: number;
+    alpha?: number; // LF specific
+    beta?: number;  // LF specific
+    // HF Specific
+    profitFactor?: number;
+    avgTradeDuration?: string;
+    fillRate?: number;
+    totalTrades?: number;
   };
 }
 
