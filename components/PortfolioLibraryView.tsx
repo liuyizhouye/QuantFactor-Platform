@@ -1,6 +1,8 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { Portfolio, Factor } from '../types';
-import { Briefcase, Trash2, Layers, Download, Search } from 'lucide-react';
+import { Briefcase, Trash2, Layers, Download, Search, Package } from 'lucide-react';
+import { exportPortfolioPackage } from '../services/exportService';
 
 interface PortfolioLibraryViewProps {
   portfolios: Portfolio[];
@@ -9,10 +11,23 @@ interface PortfolioLibraryViewProps {
 }
 
 const PortfolioLibraryView: React.FC<PortfolioLibraryViewProps> = ({ portfolios, factors, onDelete }) => {
+  const [exportingId, setExportingId] = useState<string | null>(null);
   
   const handleDelete = (id: string) => {
     if (window.confirm("Are you sure you want to delete this portfolio strategy?")) {
         onDelete(id);
+    }
+  };
+
+  const handleExport = async (portfolio: Portfolio) => {
+    setExportingId(portfolio.id);
+    try {
+        await exportPortfolioPackage(portfolio, factors);
+    } catch (e) {
+        console.error("Failed to export portfolio", e);
+        alert("Export failed.");
+    } finally {
+        setExportingId(null);
     }
   };
 
@@ -68,8 +83,13 @@ const PortfolioLibraryView: React.FC<PortfolioLibraryViewProps> = ({ portfolios,
                                 <p className="text-slate-400 text-sm mt-1">{portfolio.description}</p>
                             </div>
                             <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity self-end md:self-auto">
-                                <button className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-blue-400 transition-colors" title="Export">
-                                    <Download size={16} />
+                                <button 
+                                    onClick={() => handleExport(portfolio)}
+                                    disabled={exportingId === portfolio.id}
+                                    className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-blue-400 transition-colors" 
+                                    title="Export Verification Package"
+                                >
+                                    {exportingId === portfolio.id ? <div className="w-4 h-4 border-2 border-slate-500 border-t-transparent rounded-full animate-spin"></div> : <Package size={16} />}
                                 </button>
                                 <button 
                                     onClick={() => handleDelete(portfolio.id)}

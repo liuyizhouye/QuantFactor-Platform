@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
 import { Factor, FactorCategory } from '../types';
-import { Trash2, Edit, Code, Filter, X, Download } from 'lucide-react';
-import { exportFactorData } from '../services/exportService';
+import { Trash2, Edit, Code, Filter, X, Download, FileText } from 'lucide-react';
+import { exportFactorPackage } from '../services/exportService';
 
 interface LibraryViewProps {
   factors: Factor[];
@@ -11,6 +11,7 @@ interface LibraryViewProps {
 
 const LibraryView: React.FC<LibraryViewProps> = ({ factors, onDelete }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [exportingId, setExportingId] = useState<string | null>(null);
 
   const categories = ['All', ...Object.values(FactorCategory)];
 
@@ -22,6 +23,18 @@ const LibraryView: React.FC<LibraryViewProps> = ({ factors, onDelete }) => {
     if (window.confirm("Are you sure you want to delete this factor? This action cannot be undone.")) {
         onDelete(id);
     }
+  };
+
+  const handleExport = async (factor: Factor) => {
+      setExportingId(factor.id);
+      try {
+          await exportFactorPackage(factor);
+      } catch (e) {
+          console.error("Export failed", e);
+          alert("Failed to generate export package.");
+      } finally {
+          setExportingId(null);
+      }
   };
 
   return (
@@ -95,11 +108,16 @@ const LibraryView: React.FC<LibraryViewProps> = ({ factors, onDelete }) => {
                             </div>
                             <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button 
-                                    onClick={() => exportFactorData(factor)}
-                                    className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-blue-400 transition-colors"
-                                    title="Export Package (JSON)"
+                                    onClick={() => handleExport(factor)}
+                                    disabled={exportingId === factor.id}
+                                    className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-blue-400 transition-colors flex items-center gap-2"
+                                    title="Download Verification Package (ZIP)"
                                 >
-                                    <Download size={16} />
+                                    {exportingId === factor.id ? (
+                                        <div className="w-4 h-4 border-2 border-slate-500 border-t-transparent rounded-full animate-spin"></div>
+                                    ) : (
+                                        <Download size={16} />
+                                    )}
                                 </button>
                                 <button className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors">
                                     <Edit size={16} />
