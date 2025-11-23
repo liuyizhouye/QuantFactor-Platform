@@ -28,25 +28,120 @@ export const useNotification = () => {
 };
 // ----------------------------
 
-// Initial Mock Data
+// Initial Mock Data - Expanded for better testing
 const INITIAL_FACTORS: Factor[] = [
+    // --- LOW FREQUENCY (ALPHA) FACTORS ---
     {
-        id: '1',
+        id: 'lf-1',
         name: 'Volume Weighted Momentum',
         description: 'Captures trends supported by increasing volume, filtering out low-liquidity price moves.',
         frequency: FactorFrequency.LOW_FREQ,
         category: FactorCategory.MOMENTUM,
         formula: 'df.close.pct_change(5) * df.volume.rolling(5).mean() / df.volume.rolling(20).mean()',
-        createdAt: new Date().toISOString()
+        createdAt: '2023-10-15T10:00:00Z',
+        performance: { sharpe: 1.85, ic: 0.06, annualizedReturn: 0.18, maxDrawdown: -0.12 }
     },
     {
-        id: '2',
+        id: 'lf-2',
+        name: 'Quality Value Composite',
+        description: 'Ranks stocks by high ROE and low PE ratio to find quality companies at a discount.',
+        frequency: FactorFrequency.LOW_FREQ,
+        category: FactorCategory.FUNDAMENTAL,
+        formula: '(df.roe_ttm.rank() + (1/df.pe_ttm).rank()) / 2',
+        createdAt: '2023-11-02T14:30:00Z',
+        performance: { sharpe: 1.42, ic: 0.04, annualizedReturn: 0.12, maxDrawdown: -0.09 }
+    },
+    {
+        id: 'lf-3',
+        name: 'Analyst Sentiment Reversion',
+        description: 'Contrarian strategy betting against excessive analyst optimism.',
+        frequency: FactorFrequency.LOW_FREQ,
+        category: FactorCategory.SENTIMENT,
+        formula: '-1 * df.rating_avg.diff(20)', 
+        createdAt: '2023-12-10T09:15:00Z',
+        performance: { sharpe: 1.10, ic: 0.03, annualizedReturn: 0.08, maxDrawdown: -0.15 }
+    },
+    {
+        id: 'lf-4',
+        name: 'Low Volatility Anomaly',
+        description: 'Betting on low beta stocks outperforming on a risk-adjusted basis.',
+        frequency: FactorFrequency.LOW_FREQ,
+        category: FactorCategory.VOLATILITY,
+        formula: '1 / df.close.rolling(60).std()',
+        createdAt: '2024-01-05T11:20:00Z',
+        performance: { sharpe: 1.65, ic: 0.05, annualizedReturn: 0.10, maxDrawdown: -0.08 }
+    },
+    {
+        id: 'lf-5',
+        name: 'RSI Mean Reversion',
+        description: 'Classic technical reversion strategy on 14-day RSI overbought levels.',
+        frequency: FactorFrequency.LOW_FREQ,
+        category: FactorCategory.MEAN_REVERSION,
+        formula: 'ta.rsi(df.close, 14) < 30',
+        createdAt: '2024-02-14T16:45:00Z',
+        performance: { sharpe: 0.95, ic: 0.02, annualizedReturn: 0.07, maxDrawdown: -0.18 }
+    },
+    {
+        id: 'lf-6',
+        name: 'Growth at Reasonable Price (GARP)',
+        description: 'Filters for PEG ratio < 1.0 combined with positive sales momentum.',
+        frequency: FactorFrequency.LOW_FREQ,
+        category: FactorCategory.FUNDAMENTAL,
+        formula: '(df.pe_ttm / df.eps_growth_yoy) < 1.0',
+        createdAt: '2024-03-01T08:00:00Z',
+        performance: { sharpe: 1.55, ic: 0.07, annualizedReturn: 0.15, maxDrawdown: -0.14 }
+    },
+
+    // --- HIGH FREQUENCY (HFT) FACTORS ---
+    {
+        id: 'hf-1',
         name: 'Order Book Imbalance Delta',
-        description: 'High frequency signal detecting shifts in bid-ask pressure before price moves.',
+        description: 'Detects aggressive shifts in bid-ask pressure before price moves.',
         frequency: FactorFrequency.HIGH_FREQ,
         category: FactorCategory.LIQUIDITY,
-        formula: '(df.bid_size - df.ask_size) / (df.bid_size + df.ask_size)',
-        createdAt: new Date().toISOString()
+        formula: '(df.bid_size_1 - df.ask_size_1) / (df.bid_size_1 + df.ask_size_1)',
+        createdAt: '2024-01-20T10:00:00Z',
+        performance: { sharpe: 4.2, ic: 0.12, annualizedReturn: 0.45, maxDrawdown: -0.02 }
+    },
+    {
+        id: 'hf-2',
+        name: 'Spread Arbitrage Scalper',
+        description: 'Provides liquidity when spread widens beyond 2 standard deviations.',
+        frequency: FactorFrequency.HIGH_FREQ,
+        category: FactorCategory.MEAN_REVERSION,
+        formula: 'df.spread_bps > (df.spread_bps.rolling(100).mean() + 2*df.spread_bps.rolling(100).std())',
+        createdAt: '2024-02-05T13:30:00Z',
+        performance: { sharpe: 3.8, ic: 0.09, annualizedReturn: 0.38, maxDrawdown: -0.01 }
+    },
+    {
+        id: 'hf-3',
+        name: 'Tick Volume Breakout',
+        description: 'Enters trades when tick volume spikes 500% above moving average.',
+        frequency: FactorFrequency.HIGH_FREQ,
+        category: FactorCategory.MOMENTUM,
+        formula: 'df.volume > df.volume.rolling(50).mean() * 5',
+        createdAt: '2024-02-18T09:45:00Z',
+        performance: { sharpe: 2.9, ic: 0.08, annualizedReturn: 0.25, maxDrawdown: -0.05 }
+    },
+    {
+        id: 'hf-4',
+        name: 'VWAP Divergence Sniper',
+        description: 'Fades price deviations from the 1-minute VWAP.',
+        frequency: FactorFrequency.HIGH_FREQ,
+        category: FactorCategory.MEAN_REVERSION,
+        formula: '(df.close - df.vwap) / df.vwap',
+        createdAt: '2024-03-05T15:15:00Z',
+        performance: { sharpe: 3.1, ic: 0.10, annualizedReturn: 0.32, maxDrawdown: -0.03 }
+    },
+    {
+        id: 'hf-5',
+        name: 'Aggressive Trade Flow',
+        description: 'Follows aggressive market orders (taker flow).',
+        frequency: FactorFrequency.HIGH_FREQ,
+        category: FactorCategory.MOMENTUM,
+        formula: '(df.buy_volume - df.sell_volume).rolling(5).sum()',
+        createdAt: '2024-03-12T11:00:00Z',
+        performance: { sharpe: 2.5, ic: 0.07, annualizedReturn: 0.28, maxDrawdown: -0.06 }
     }
 ];
 

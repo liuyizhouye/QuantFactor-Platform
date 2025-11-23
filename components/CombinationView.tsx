@@ -1,9 +1,9 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Factor, FactorCategory, FactorFrequency, BacktestResult, Portfolio } from '../types';
 import { generateFactorCombination } from '../services/geminiService';
 import { runMultiFactorBacktest } from '../services/mockDataService';
-import { FlaskConical, Check, Save, Loader2, ArrowRight, Layers, Code2, ShieldAlert, LineChart, PieChart, Zap, Scale, Clock } from 'lucide-react';
+import { FlaskConical, Check, Save, Loader2, ArrowRight, Layers, Code2, ShieldAlert, LineChart, PieChart, Zap, Scale, Clock, Search, Filter, ListFilter } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 
 interface CombinationViewProps {
@@ -27,6 +27,10 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddPortfol
   const [maxInventory, setMaxInventory] = useState('100');
   const [latencyConstraint, setLatencyConstraint] = useState('10ms');
 
+  // Factor Pool Filter State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterCategory, setFilterCategory] = useState<string>('All');
+
   // State
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -39,6 +43,15 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddPortfol
   // Filter factors for current mode
   const availableFactors = factors.filter(f => f.frequency === targetFrequency);
 
+  // Derived filtered list for display
+  const filteredFactors = useMemo(() => {
+      return availableFactors.filter(f => {
+          const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase());
+          const matchesCategory = filterCategory === 'All' || f.category === filterCategory;
+          return matchesSearch && matchesCategory;
+      });
+  }, [availableFactors, searchTerm, filterCategory]);
+
   useEffect(() => {
     return () => {
         if (progressInterval.current) clearInterval(progressInterval.current);
@@ -50,6 +63,8 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddPortfol
     setSelectedIds(new Set());
     setFormulaResult(null);
     setBacktestResult(null);
+    setSearchTerm('');
+    setFilterCategory('All');
   }, [targetFrequency]);
 
   const toggleFactor = (id: string) => {
@@ -60,6 +75,16 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddPortfol
       newSelected.add(id);
     }
     setSelectedIds(newSelected);
+  };
+
+  const handleSelectAllFiltered = () => {
+      const newSelected = new Set(selectedIds);
+      filteredFactors.forEach(f => newSelected.add(f.id));
+      setSelectedIds(newSelected);
+  };
+
+  const handleClearSelection = () => {
+      setSelectedIds(new Set());
   };
 
   const handleOptimizeAndBacktest = async () => {
@@ -184,23 +209,71 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddPortfol
       <div className="flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-12 gap-6 md:gap-8">
         
         {/* Left Panel: Factor Selection */}
-        <div className="lg:col-span-4 flex flex-col min-h-[400px] lg:min-h-0 lg:h-full bg-slate-900 border border-slate-800 rounded-xl shadow-lg overflow-hidden shrink-0">
+        <div className="lg:col-span-4 flex flex-col min-h-[500px] lg:min-h-0 lg:h-full bg-slate-900 border border-slate-800 rounded-xl shadow-lg overflow-hidden shrink-0">
+            {/* Header */}
             <div className="p-4 border-b border-slate-800 bg-slate-950/50 flex items-center justify-between shrink-0">
                 <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider">Factor Pool</h3>
                 <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-400 border border-slate-700">{selectedIds.size} selected</span>
             </div>
             
-            <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                {availableFactors.length === 0 ? (
+            {/* Search & Filter Toolbar */}
+            <div className="p-3 border-b border-slate-800 bg-slate-900 space-y-3">
+                <div className="relative">
+                    <Search className="absolute left-3 top-2.5 text-slate-500" size={14} />
+                    <input 
+                        type="text" 
+                        placeholder="Search factors..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 placeholder:text-slate-600"
+                    />
+                </div>
+                <div className="flex gap-2">
+                     <div className="relative flex-1">
+                        <ListFilter className="absolute left-2.5 top-2.5 text-slate-500" size={12} />
+                        <select 
+                            value={filterCategory}
+                            onChange={(e) => setFilterCategory(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-800 text-slate-300 text-xs rounded-lg pl-8 pr-2 py-2 focus:outline-none appearance-none"
+                        >
+                            <option value="All">All Categories</option>
+                            {Object.values(FactorCategory).map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                     </div>
+                     <button 
+                        onClick={handleSelectAllFiltered}
+                        className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs border border-slate-700 transition-colors"
+                        title="Select All Visible"
+                     >
+                        Select All
+                     </button>
+                     <button 
+                        onClick={handleClearSelection}
+                        className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs border border-slate-700 transition-colors"
+                        title="Clear Selection"
+                     >
+                        Clear
+                     </button>
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-thin scrollbar-thumb-slate-700">
+                {filteredFactors.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-slate-500 text-sm p-6 text-center gap-2">
                          <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center mb-2">
-                            <FlaskConical size={18} className="opacity-50" />
+                            <Search size={18} className="opacity-50" />
                          </div>
-                        <p>No {isHighFreq ? 'HFT' : 'Alpha'} factors found.</p>
-                        <p className="text-xs">Go to Mining to generate new factors.</p>
+                        {availableFactors.length === 0 ? (
+                            <>
+                                <p>No {isHighFreq ? 'HFT' : 'Alpha'} factors found.</p>
+                                <p className="text-xs">Go to Mining to generate new factors.</p>
+                            </>
+                        ) : (
+                            <p>No factors match your search.</p>
+                        )}
                     </div>
                 ) : (
-                    availableFactors.map(factor => {
+                    filteredFactors.map(factor => {
                         const isSelected = selectedIds.has(factor.id);
                         return (
                             <div 
