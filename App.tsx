@@ -1,3 +1,4 @@
+
 import React, { useState, createContext, useContext } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -8,7 +9,7 @@ import CombinationView from './components/CombinationView';
 import PortfolioLibraryView from './components/PortfolioLibraryView';
 import ConsoleView from './components/ConsoleView';
 import SettingsView from './components/SettingsView';
-import DataExplorerView from './components/DataExplorerView';
+import DataExplorerView, { DataCategory } from './components/DataExplorerView';
 import { Factor, FactorCategory, FactorFrequency, Portfolio } from './types';
 import { Menu } from 'lucide-react';
 
@@ -181,6 +182,15 @@ const App: React.FC = () => {
     setPortfolios(prev => prev.filter(p => p.id !== id));
   };
 
+  // Helper to resolve data category from tab ID
+  const getDataCategory = (tabId: string): DataCategory => {
+      switch(tabId) {
+          case 'data-fund': return 'FUNDAMENTAL';
+          case 'data-alt': return 'ALTERNATIVE';
+          default: return 'MARKET';
+      }
+  };
+
   return (
     <NotificationContext.Provider value={notify}>
         <div className="h-screen bg-slate-950 text-slate-200 font-sans flex overflow-hidden relative">
@@ -234,6 +244,16 @@ const App: React.FC = () => {
                     <Dashboard factors={factors} />
                 </div>
                 
+                {/* --- DATA EXPLORER MODULES --- */}
+                {/* We render a single instance or multiple depending on if we want to persist state. 
+                    Here we use Keep-Alive style by rendering one generic view that adapts to props, 
+                    BUT since the prompt implies separate 'modules', using the 'startsWith' check lets us 
+                    route all data-* tabs to this view. 
+                */}
+                <div className={`h-full z-10 relative ${activeTab.startsWith('data-') ? 'block' : 'hidden'}`}>
+                    <DataExplorerView targetCategory={getDataCategory(activeTab)} />
+                </div>
+
                 {/* --- LOW FREQUENCY MODULES --- */}
                 <div className={`h-full z-10 relative ${activeTab === 'mining-lf' ? 'block' : 'hidden'}`}>
                     <MiningView onAddFactor={handleAddFactor} targetFrequency={FactorFrequency.LOW_FREQ} />
@@ -274,10 +294,6 @@ const App: React.FC = () => {
 
                 <div className={`h-full z-10 relative ${activeTab === 'settings' ? 'block' : 'hidden'}`}>
                     <SettingsView />
-                </div>
-
-                <div className={`h-full z-10 relative ${activeTab === 'data' ? 'block' : 'hidden'}`}>
-                    <DataExplorerView />
                 </div>
 
                 </main>

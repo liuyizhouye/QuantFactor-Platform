@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { LayoutDashboard, Pickaxe, BookOpen, LineChart, Settings, Database, Terminal, FlaskConical, X, Briefcase, Zap, Activity } from 'lucide-react';
+import { LayoutDashboard, Pickaxe, BookOpen, LineChart, Settings, Database, Terminal, FlaskConical, X, Briefcase, Zap, Activity, TrendingUp, FileText, Share2 } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -15,7 +16,16 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, onCl
       title: "Overview",
       items: [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'data', label: 'Data Explorer', icon: Database },
+        { id: 'console', label: 'Python Console', icon: Terminal },
+        { id: 'settings', label: 'Settings', icon: Settings },
+      ]
+    },
+    {
+      title: "Data Analysis",
+      items: [
+         { id: 'data-market', label: 'Market Data', icon: TrendingUp },
+         { id: 'data-fund', label: 'Fundamental Data', icon: FileText },
+         { id: 'data-alt', label: 'Alternative Data', icon: Share2 },
       ]
     },
     {
@@ -40,13 +50,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, onCl
       title: "Portfolio Management",
       items: [
         { id: 'portfolio-lib', label: 'Portfolio Library', icon: Briefcase },
-      ]
-    },
-    {
-      title: "System",
-      items: [
-        { id: 'console', label: 'Python Console', icon: Terminal },
-        { id: 'settings', label: 'Settings', icon: Settings },
       ]
     }
   ];
