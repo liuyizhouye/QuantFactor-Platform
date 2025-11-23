@@ -1,3 +1,4 @@
+
 export enum FactorFrequency {
   HIGH_FREQ = 'High Frequency (Intraday)',
   LOW_FREQ = 'Low Frequency (Daily)',
@@ -34,6 +35,7 @@ export interface Portfolio {
   description: string;
   createdAt: string;
   strategy: string; // e.g. "Equal Weight", "Risk Parity"
+  frequency: FactorFrequency; // Added to strictly separate HF/LF
   factorIds: string[];
   constraints?: {
     sectorNeutral: boolean;
@@ -47,6 +49,13 @@ export interface Portfolio {
     maxDrawdown: number;
     alpha: number;
     beta: number;
+  };
+  // Out-of-Sample / Live Tracking
+  oosPerformance?: {
+    startDate: string;
+    returnTD: number; // Return to date
+    sharpe: number;
+    activeDrawdown: number;
   };
 }
 

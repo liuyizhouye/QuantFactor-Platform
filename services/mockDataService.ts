@@ -1,4 +1,5 @@
-import { BacktestResult, ChartDataPoint, FactorFrequency } from "../types";
+
+import { BacktestResult, ChartDataPoint, FactorFrequency, Portfolio } from "../types";
 
 // Generate a random walk for stock prices
 export const generateMarketData = (days: number = 252) => {
@@ -177,4 +178,43 @@ export const runMultiFactorBacktest = (frequency: FactorFrequency = FactorFreque
       totalTrades: isHighFreq ? 1250 : undefined
     }
   };
+};
+
+// Simulate Out-of-Sample (OOS) Live Performance
+export const generateOOSData = (portfolio: Portfolio, days: number = 30): { date: string, value: number }[] => {
+    const isHighFreq = portfolio.frequency === FactorFrequency.HIGH_FREQ;
+    const data: { date: string, value: number }[] = [];
+    let price = 1000; // Start normalized for comparison
+    
+    // Use hash of ID to make random but consistent per portfolio
+    const seed = portfolio.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+    const pseudoRandom = (i: number) => {
+        const x = Math.sin(seed + i) * 10000;
+        return x - Math.floor(x);
+    };
+
+    const now = new Date();
+    
+    for(let i=0; i<days; i++) {
+         const date = new Date(now);
+         date.setDate(date.getDate() - (days - i));
+         const dateStr = date.toISOString().split('T')[0];
+
+         // Simulate Alpha Decay: OOS performance is usually worse than backtest
+         const decayFactor = 0.8; 
+         const baseVol = isHighFreq ? 0.008 : 0.02;
+         const direction = (pseudoRandom(i) - 0.45) * baseVol; // Bias slightly positive but noisy
+         
+         // Apply portfolio specific 'quality' (Sharpe) to the drift
+         const qualityDrift = (portfolio.performance.sharpe / 5) * 0.005 * decayFactor;
+
+         price = price * (1 + direction + qualityDrift);
+         
+         data.push({
+             date: dateStr,
+             value: price
+         });
+    }
+
+    return data;
 };

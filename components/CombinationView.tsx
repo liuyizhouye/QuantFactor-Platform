@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Factor, FactorCategory, FactorFrequency, BacktestResult, Portfolio } from '../types';
 import { generateFactorCombination } from '../services/geminiService';
@@ -117,12 +118,16 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddPortfol
   const handleSave = () => {
     if (!formulaResult || !backtestResult) return;
     
+    // Mock OOS performance for initial display
+    const mockOOSReturn = (Math.random() - 0.4) * 0.05; 
+
     const newPortfolio: Portfolio = {
         id: Date.now().toString(),
         name: formulaResult.name,
         description: formulaResult.description,
         createdAt: new Date().toISOString(),
         strategy: isHighFreq ? executionStrategy : weightingMethod,
+        frequency: targetFrequency,
         factorIds: Array.from(selectedIds),
         constraints: {
             sectorNeutral: !isHighFreq && sectorNeutral,
@@ -136,6 +141,12 @@ const CombinationView: React.FC<CombinationViewProps> = ({ factors, onAddPortfol
             maxDrawdown: backtestResult.metrics.maxDrawdown,
             alpha: backtestResult.metrics.alpha || 0,
             beta: backtestResult.metrics.beta || 0
+        },
+        oosPerformance: {
+            startDate: new Date().toISOString(),
+            returnTD: mockOOSReturn,
+            sharpe: backtestResult.metrics.sharpeRatio * 0.8, // OOS usually degrades
+            activeDrawdown: -0.01
         }
     };
 
