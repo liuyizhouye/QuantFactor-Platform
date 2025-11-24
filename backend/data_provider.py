@@ -42,6 +42,9 @@ class DataProvider:
     def list_portfolios(self) -> List[Portfolio]:
         return list(self._portfolios.values())
 
+    def get_portfolio(self, portfolio_id: str) -> Optional[Portfolio]:
+        return self._portfolios.get(portfolio_id)
+
     def save_portfolio(self, portfolio: Portfolio) -> Portfolio:
         # TODO: Persist to database
         self._portfolios[portfolio.id] = portfolio
@@ -52,17 +55,21 @@ class DataProvider:
         return self._portfolios.pop(portfolio_id, None) is not None
 
     # ----------------------------- Market methods ----------------------------
-    def get_market_snapshot(self, days: int = 60) -> pd.DataFrame:
-        """Return a synthetic price series.
+    def get_market_snapshot(self, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+        """Return a synthetic price series for the requested date window.
 
         This placeholder makes it easy to swap in a real market-data provider by
         replacing this method with an API call.
         """
 
-        today = datetime.utcnow().date()
-        dates = pd.date_range(end=today, periods=days)
-        # Generate a gently trending price path
+        if end_date < start_date:
+            raise ValueError("end_date must be on or after start_date")
+
+        days = (end_date.date() - start_date.date()).days + 1
+        dates = pd.date_range(start=start_date.date(), periods=days, freq="B")
+
         base_price = 100.0
-        returns = np.random.normal(loc=0.0005, scale=0.01, size=days)
+        returns = np.random.normal(loc=0.0005, scale=0.01, size=len(dates))
         prices = (1 + pd.Series(returns)).cumprod() * base_price
+
         return pd.DataFrame({"date": dates, "close": prices}).set_index("date")

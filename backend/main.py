@@ -70,7 +70,7 @@ def delete_portfolio(portfolio_id: str) -> dict:
 
 @app.post("/portfolios/{portfolio_id}/insight", response_model=InsightResponse)
 def portfolio_insight(portfolio_id: str) -> InsightResponse:
-    portfolio = next((p for p in data_provider.list_portfolios() if p.id == portfolio_id), None)
+    portfolio = data_provider.get_portfolio(portfolio_id)
     if not portfolio:
         raise HTTPException(status_code=404, detail="Portfolio not found")
     return ai_service.summarize_portfolio(portfolio)

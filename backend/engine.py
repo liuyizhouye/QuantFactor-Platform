@@ -23,8 +23,13 @@ class BacktestEngine:
         self.data_provider = data_provider
 
     def run_backtest(self, request: BacktestRequest) -> BacktestResult:
+        if request.end_date < request.start_date:
+            raise ValueError("end_date must be on or after start_date")
+
         factor = self._require_factor(request.factor_id)
-        prices = self.data_provider.get_market_snapshot()
+        prices = self.data_provider.get_market_snapshot(request.start_date, request.end_date)
+        if len(prices) < 2:
+            raise ValueError("Not enough price history for the requested window")
         daily_returns = prices["close"].pct_change().fillna(0)
 
         # A placeholder strategy: scale daily returns by a simple signal derived
