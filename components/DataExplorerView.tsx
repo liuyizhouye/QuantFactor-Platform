@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Table as TableIcon, HardDrive, Search, BarChart3, TrendingUp, FileText, Globe, PieChart, Building2, ScatterChart as ScatterIcon, ArrowRightLeft, Layers, ListFilter, Loader2, DollarSign, Eye, ArrowDownUp } from 'lucide-react';
+import { Table as TableIcon, HardDrive, Search, BarChart3, TrendingUp, FileText, Globe, PieChart, Building2, ScatterChart as ScatterIcon, ArrowRightLeft, Layers, ListFilter, Loader2, DollarSign, Eye, ArrowDownUp, Menu } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Line, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Brush, ReferenceLine, ScatterChart, Scatter, ZAxis } from 'recharts';
 
 // --- Types ---
@@ -242,10 +242,11 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
 
   // --- Renders ---
 
+  // Desktop Sidebar
   const renderSidebar = () => {
       if (targetCategory === 'FUNDAMENTAL') {
           return (
-            <div className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col min-h-0 shrink-0">
+            <div className="hidden md:flex w-64 bg-slate-900 border-r border-slate-800 flex-col min-h-0 shrink-0">
                 {/* Mode Switcher */}
                 <div className="p-4 border-b border-slate-800 space-y-2">
                      <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800">
@@ -321,7 +322,7 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
 
       // Default Sidebar for Market
       return (
-        <div className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col min-h-0 shrink-0">
+        <div className="hidden md:flex w-64 bg-slate-900 border-r border-slate-800 flex-col min-h-0 shrink-0">
             <div className="p-4 border-b border-slate-800 bg-slate-950/30">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Datasets</h3>
                 <div className="relative">
@@ -350,17 +351,81 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
       );
   };
 
+  // Mobile Navigation Header
+  const renderMobileNav = () => {
+      return (
+          <div className="md:hidden p-4 bg-slate-900 border border-slate-800 rounded-xl mb-4 space-y-3">
+              {targetCategory === 'FUNDAMENTAL' ? (
+                  <>
+                    <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800">
+                        <button 
+                            onClick={() => setFundMode('UNIVERSE')}
+                            className={`flex-1 py-1.5 rounded text-xs font-bold flex items-center justify-center gap-2 transition-all ${fundMode === 'UNIVERSE' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}
+                        >
+                            <Layers size={14} /> Universe
+                        </button>
+                        <button 
+                            onClick={() => setFundMode('SINGLE')}
+                            className={`flex-1 py-1.5 rounded text-xs font-bold flex items-center justify-center gap-2 transition-all ${fundMode === 'SINGLE' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}
+                        >
+                            <Building2 size={14} /> Single
+                        </button>
+                    </div>
+                    {fundMode === 'UNIVERSE' ? (
+                        <select 
+                            className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-sm text-white"
+                            value={selectedMetric.id}
+                            onChange={(e) => {
+                                const m = FUND_METRICS.find(f => f.id === e.target.value);
+                                if(m) setSelectedMetric(m);
+                            }}
+                        >
+                            {FUND_METRICS.map(m => (
+                                <option key={m.id} value={m.id}>{m.name}</option>
+                            ))}
+                        </select>
+                    ) : (
+                        <div className="relative">
+                            <Search className="absolute left-3 top-2.5 text-slate-500" size={14} />
+                            <select
+                                className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3 py-2 text-sm text-white appearance-none"
+                                value={selectedTicker}
+                                onChange={(e) => setSelectedTicker(e.target.value)}
+                            >
+                                {MOCK_TICKERS.map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                        </div>
+                    )}
+                  </>
+              ) : (
+                  <select 
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-sm text-white"
+                    value={selectedDataset?.id}
+                    onChange={(e) => {
+                        const ds = filteredDatasets.find(d => d.id === e.target.value);
+                        if(ds) setSelectedDataset(ds);
+                    }}
+                  >
+                      {filteredDatasets.map(ds => (
+                          <option key={ds.id} value={ds.id}>{ds.name} ({ds.symbol})</option>
+                      ))}
+                  </select>
+              )}
+          </div>
+      );
+  };
+
   const renderContent = () => {
       if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin text-blue-500" size={32} /></div>;
       
       if (targetCategory === 'FUNDAMENTAL') {
           if (fundMode === 'UNIVERSE') {
               return (
-                  <div className="flex flex-col h-full p-6 overflow-y-auto gap-6">
+                  <div className="flex flex-col h-full p-4 md:p-6 overflow-y-auto gap-4 md:gap-6">
                        {/* 1. Visualizations Grid */}
-                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 shrink-0">
+                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 shrink-0">
                            {/* Chart 1: Trend */}
-                           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg h-[300px]">
+                           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg h-[250px] md:h-[300px]">
                                <h4 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2"><TrendingUp size={16} className="text-blue-500"/> Median & Range (10Y)</h4>
                                <ResponsiveContainer width="100%" height="85%">
                                    <ComposedChart data={data}>
@@ -376,7 +441,7 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
                            </div>
 
                            {/* Chart 2: Distribution */}
-                           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg h-[300px]">
+                           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg h-[250px] md:h-[300px]">
                                <h4 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2"><BarChart3 size={16} className="text-purple-500"/> Cross-Sectional Histogram</h4>
                                <ResponsiveContainer width="100%" height="85%">
                                    <BarChart data={distData}>
@@ -390,7 +455,7 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
                            </div>
 
                            {/* Chart 3: Scatter */}
-                           <div className="col-span-1 lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg h-[350px]">
+                           <div className="col-span-1 lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg h-[300px] md:h-[350px]">
                                <h4 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2"><ScatterIcon size={16} className="text-emerald-500"/> Universe Scatter ({selectedMetric.name} vs Growth)</h4>
                                <ResponsiveContainer width="100%" height="85%">
                                    <ScatterChart>
@@ -408,8 +473,8 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
                    {/* 2. Universe Constituents Table (Bottom) */}
                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg overflow-hidden flex flex-col min-h-[400px]">
                        <h4 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2"><ListFilter size={16} className="text-slate-500"/> Constituents Data</h4>
-                       <div className="flex-1 overflow-auto">
-                           <table className="w-full text-left text-sm text-slate-400 font-mono">
+                       <div className="flex-1 overflow-auto -mx-4 md:mx-0">
+                           <table className="w-full text-left text-sm text-slate-400 font-mono min-w-[600px] md:min-w-0">
                                 <thead className="bg-slate-950 text-slate-200 sticky top-0 z-10">
                                     <tr>
                                         <th className="px-4 py-2 border-b border-slate-800">Ticker</th>
@@ -422,7 +487,7 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
                                 <tbody className="divide-y divide-slate-800/50">
                                     {scatterData.map((row, i) => (
                                         <tr key={i} className="hover:bg-slate-800/30">
-                                            <td className="px-4 py-2 text-slate-200 font-bold">{row.ticker}</td>
+                                            <td className="px-4 py-2 text-slate-200 font-bold sticky left-0 bg-slate-900 md:bg-transparent md:static">{row.ticker}</td>
                                             <td className="px-4 py-2 text-slate-400">{row.sector}</td>
                                             <td className="px-4 py-2 text-right text-blue-400">{row.x}</td>
                                             <td className="px-4 py-2 text-right text-emerald-400">{row.y}</td>
@@ -442,7 +507,7 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
               }
 
               return (
-                  <div className="flex flex-col h-full p-6 overflow-y-auto gap-6">
+                  <div className="flex flex-col h-full p-4 md:p-6 overflow-y-auto gap-4 md:gap-6">
                       {/* Header Info */}
                       <div className="flex justify-between items-center">
                           <div>
@@ -458,11 +523,11 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
                       {/* 1. Financial Statements Table (TOP PRIORITY) */}
                       <div className="min-h-[400px] bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg overflow-hidden flex flex-col">
                           <h4 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2"><FileText size={16} className="text-blue-500"/> Historical Financial Statements</h4>
-                          <div className="flex-1 overflow-auto">
-                             <table className="w-full text-left text-sm text-slate-400 font-mono">
+                          <div className="flex-1 overflow-auto -mx-4 md:mx-0">
+                             <table className="w-full text-left text-sm text-slate-400 font-mono min-w-[800px] md:min-w-0">
                                 <thead className="bg-slate-950 text-slate-200 sticky top-0 z-10">
                                     <tr>
-                                        <th className="px-4 py-2 border-b border-slate-800">Period</th>
+                                        <th className="px-4 py-2 border-b border-slate-800 sticky left-0 bg-slate-950">Period</th>
                                         <th className="px-4 py-2 border-b border-slate-800 text-right">Revenue</th>
                                         <th className="px-4 py-2 border-b border-slate-800 text-right">FCF</th>
                                         <th className="px-4 py-2 border-b border-slate-800 text-right">EPS</th>
@@ -475,7 +540,7 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
                                     {/* Reverse map to show newest first */}
                                     {[...data].reverse().map((row, i) => (
                                         <tr key={i} className="hover:bg-slate-800/30">
-                                            <td className="px-4 py-2 text-slate-300">{row.timestamp}</td>
+                                            <td className="px-4 py-2 text-slate-300 sticky left-0 bg-slate-900 md:bg-transparent md:static">{row.timestamp}</td>
                                             <td className="px-4 py-2 text-right">{row.revenue?.toLocaleString() || '-'}</td>
                                             <td className="px-4 py-2 text-right text-emerald-400/80">{row.fcf?.toLocaleString() || '-'}</td>
                                             <td className="px-4 py-2 text-right">{row.eps}</td>
@@ -490,7 +555,7 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
                       </div>
 
                       {/* 2. Visualizer (Consolidated) */}
-                      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg h-[400px] flex flex-col shrink-0">
+                      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg h-[350px] md:h-[400px] flex flex-col shrink-0">
                           <div className="flex justify-between items-center mb-4">
                                <h4 className="text-sm font-bold text-slate-300 flex items-center gap-2">
                                    <Eye size={16} className="text-purple-500"/> Financial Visualizer
@@ -548,8 +613,8 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
 
       // Default Chart/Table View for Market
       return (
-          <div className="h-full p-6 flex flex-col gap-6">
-             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg h-[400px]">
+          <div className="h-full p-4 md:p-6 flex flex-col gap-4 md:gap-6">
+             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg h-[300px] md:h-[400px]">
                   <ResponsiveContainer width="100%" height="100%">
                       <ComposedChart data={data}>
                            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
@@ -565,12 +630,12 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
              </div>
              {/* Simple Table Preview */}
              <div className="flex-1 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-                 <div className="overflow-auto h-full">
-                     <table className="w-full text-sm text-slate-400 font-mono">
+                 <div className="overflow-auto h-full -mx-4 md:mx-0">
+                     <table className="w-full text-sm text-slate-400 font-mono min-w-[600px] md:min-w-0">
                          <thead className="bg-slate-950 text-slate-200 sticky top-0">
                              <tr>
                                  {data.length > 0 && Object.keys(data[0]).slice(0, 6).map(k => (
-                                     <th key={k} className="px-4 py-2 border-b border-slate-800 text-left">{k}</th>
+                                     <th key={k} className="px-4 py-2 border-b border-slate-800 text-left sticky left-0 bg-slate-950 md:static">{k}</th>
                                  ))}
                              </tr>
                          </thead>
@@ -578,7 +643,7 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
                              {data.slice(0, 50).map((row, i) => (
                                  <tr key={i} className="hover:bg-slate-800/30 border-b border-slate-800/50">
                                      {Object.values(row).slice(0, 6).map((v, j) => (
-                                         <td key={j} className="px-4 py-2">{typeof v === 'number' ? v.toLocaleString() : v}</td>
+                                         <td key={j} className={`px-4 py-2 ${j===0 ? 'sticky left-0 bg-slate-900 md:static' : ''}`}>{typeof v === 'number' ? v.toLocaleString() : v}</td>
                                      ))}
                                  </tr>
                              ))}
@@ -591,7 +656,7 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
   };
 
   return (
-    <div className="h-full flex flex-col p-4 md:p-6 max-w-7xl mx-auto gap-6">
+    <div className="h-full flex flex-col p-4 md:p-6 max-w-7xl mx-auto gap-4 md:gap-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-white flex items-center gap-3">
@@ -606,6 +671,9 @@ const DataExplorerView: React.FC<DataExplorerViewProps> = ({ targetCategory }) =
                 : `Source: ${selectedDataset?.id} • ${selectedDataset?.rows.toLocaleString()} rows available`}
         </p>
       </div>
+
+      {/* Render Mobile Navigation */}
+      {renderMobileNav()}
 
       <div className="flex flex-1 gap-6 min-h-0 bg-slate-900/30 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
         {renderSidebar()}

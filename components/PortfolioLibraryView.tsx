@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Portfolio, Factor, FactorFrequency } from '../types';
-import { Briefcase, Trash2, Layers, Download, Search, Package, Zap, FlaskConical, TrendingUp, CheckSquare, Square } from 'lucide-react';
+import { Briefcase, Trash2, Layers, Download, Search, Package, Zap, FlaskConical, TrendingUp, CheckSquare, Square, ChevronRight } from 'lucide-react';
 import { exportPortfolioPackage } from '../services/exportService';
 import { generateOOSData } from '../services/mockDataService';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
@@ -76,7 +76,6 @@ const PortfolioLibraryView: React.FC<PortfolioLibraryViewProps> = ({ portfolios,
       });
 
       // Merge into Recharts format
-      // Assumes all series have same length/dates for mock simplicity
       const firstSeries = seriesMap[selectedPorts[0].name];
       if (!firstSeries) return [];
 
@@ -89,40 +88,39 @@ const PortfolioLibraryView: React.FC<PortfolioLibraryViewProps> = ({ portfolios,
       });
   }, [selectedForCompare, filteredPortfolios]);
 
-  // Comparison Colors
   const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ec4899'];
 
   return (
-    <div className="h-full overflow-y-auto p-8 max-w-7xl mx-auto pb-24">
+    <div className="h-full overflow-y-auto p-4 md:p-8 max-w-7xl mx-auto pb-24">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <div>
                 <h1 className="text-2xl font-bold text-white flex items-center gap-2">
                     <Briefcase className="text-pink-500" />
                     Portfolio Library
                 </h1>
-                <p className="text-slate-400">Manage and track your proprietary strategies</p>
+                <p className="text-slate-400 text-sm hidden md:block">Manage and track your proprietary strategies</p>
             </div>
             
-            {/* Frequency Tabs - Strict Separation */}
-            <div className="bg-slate-900 p-1 rounded-lg border border-slate-800 flex">
+            {/* Frequency Tabs */}
+            <div className="bg-slate-900 p-1 rounded-lg border border-slate-800 flex w-full md:w-auto">
                 <button 
                     onClick={() => { setActiveFrequency(FactorFrequency.LOW_FREQ); setSelectedForCompare(new Set()); }}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeFrequency === FactorFrequency.LOW_FREQ ? 'bg-slate-800 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                    className={`flex-1 md:flex-none px-4 py-2 rounded-md text-sm font-medium transition-all flex justify-center items-center gap-2 ${activeFrequency === FactorFrequency.LOW_FREQ ? 'bg-slate-800 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
                 >
-                    <FlaskConical size={16} /> Alpha Strategies
+                    <FlaskConical size={16} /> Alpha
                 </button>
                 <button 
                      onClick={() => { setActiveFrequency(FactorFrequency.HIGH_FREQ); setSelectedForCompare(new Set()); }}
-                     className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeFrequency === FactorFrequency.HIGH_FREQ ? 'bg-slate-800 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                     className={`flex-1 md:flex-none px-4 py-2 rounded-md text-sm font-medium transition-all flex justify-center items-center gap-2 ${activeFrequency === FactorFrequency.HIGH_FREQ ? 'bg-slate-800 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
                 >
-                    <Zap size={16} /> HFT Strategies
+                    <Zap size={16} /> HFT
                 </button>
             </div>
         </div>
 
-        {/* COMPARISON SECTION */}
+        {/* COMPARISON SECTION (Hidden on Mobile) */}
         {selectedForCompare.size > 0 && (
-            <div className="mb-8 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl animate-in fade-in slide-in-from-top-4">
+            <div className="hidden md:block mb-8 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl animate-in fade-in slide-in-from-top-4">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-bold text-white flex items-center gap-2">
                         <TrendingUp className="text-blue-500" />
@@ -142,14 +140,7 @@ const PortfolioLibraryView: React.FC<PortfolioLibraryViewProps> = ({ portfolios,
                                 const p = filteredPortfolios.find(pt => pt.id === id);
                                 if (!p) return null;
                                 return (
-                                    <Line 
-                                        key={id} 
-                                        type="monotone" 
-                                        dataKey={p.name} 
-                                        stroke={colors[idx % colors.length]} 
-                                        strokeWidth={2} 
-                                        dot={false}
-                                    />
+                                    <Line key={id} type="monotone" dataKey={p.name} stroke={colors[idx % colors.length]} strokeWidth={2} dot={false} />
                                 );
                             })}
                         </LineChart>
@@ -158,12 +149,11 @@ const PortfolioLibraryView: React.FC<PortfolioLibraryViewProps> = ({ portfolios,
             </div>
         )}
 
-        {/* Filter Bar */}
         <div className="mb-6 relative">
             <Search className="absolute left-3 top-2.5 text-slate-500" size={16} />
             <input 
                 type="text" 
-                placeholder={`Search ${isHighFreq ? 'HFT' : 'Alpha'} portfolios...`}
+                placeholder="Search portfolios..."
                 className="w-full md:w-96 bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-pink-500"
             />
         </div>
@@ -171,85 +161,81 @@ const PortfolioLibraryView: React.FC<PortfolioLibraryViewProps> = ({ portfolios,
         <div className="grid grid-cols-1 gap-6">
             {filteredPortfolios.length === 0 ? (
                 <div className="text-center py-20 text-slate-500 bg-slate-900 rounded-xl border border-dashed border-slate-800 flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center">
-                        <Briefcase size={24} className="opacity-50" />
-                    </div>
-                    <p>No {isHighFreq ? 'HFT' : 'Alpha'} portfolios saved yet.</p>
-                    <p className="text-sm">Go to "Portfolio Backtest & Analyze" to build one.</p>
+                    <Briefcase size={24} className="opacity-50" />
+                    <p>No portfolios saved yet.</p>
                 </div>
             ) : (
                 filteredPortfolios.map((portfolio) => {
                     const isSelected = selectedForCompare.has(portfolio.id);
                     return (
-                    <div key={portfolio.id} className={`bg-slate-900 border rounded-xl p-6 transition-all shadow-lg group relative overflow-hidden ${isSelected ? 'border-blue-500 ring-1 ring-blue-500/20' : 'border-slate-800 hover:border-pink-600/50'}`}>
+                    <div key={portfolio.id} className={`bg-slate-900 border rounded-xl p-4 md:p-6 transition-all shadow-lg group relative overflow-hidden ${isSelected ? 'border-blue-500 ring-1 ring-blue-500/20' : 'border-slate-800 hover:border-pink-600/50'}`}>
                         
                         <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
                             <div className="flex items-start gap-4">
                                 <button 
                                     onClick={() => toggleCompare(portfolio.id)}
-                                    className={`mt-1 text-slate-500 hover:text-white transition-colors ${isSelected ? 'text-blue-500' : ''}`}
+                                    className={`hidden md:block mt-1 text-slate-500 hover:text-white transition-colors ${isSelected ? 'text-blue-500' : ''}`}
                                     title="Compare Performance"
                                 >
                                     {isSelected ? <CheckSquare size={20} /> : <Square size={20} />}
                                 </button>
                                 <div>
-                                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <h3 className="text-lg md:text-xl font-bold text-white flex items-center gap-2">
                                         {portfolio.name}
                                     </h3>
-                                    <p className="text-slate-400 text-sm mt-1">{portfolio.description}</p>
+                                    <p className="text-slate-400 text-sm mt-1 max-w-lg">{portfolio.description}</p>
                                 </div>
                             </div>
-                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity self-end md:self-auto">
+                            <div className="flex gap-2 self-end md:self-auto">
                                 <button 
                                     onClick={() => handleExport(portfolio)}
                                     disabled={exportingId === portfolio.id}
-                                    className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-blue-400 transition-colors" 
-                                    title="Export Verification Package"
+                                    className="p-2 bg-slate-950 md:bg-transparent border md:border-transparent border-slate-800 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-blue-400 transition-colors" 
                                 >
                                     {exportingId === portfolio.id ? <div className="w-4 h-4 border-2 border-slate-500 border-t-transparent rounded-full animate-spin"></div> : <Package size={16} />}
                                 </button>
                                 <button 
                                     onClick={() => handleDelete(portfolio.id)}
-                                    className="p-2 hover:bg-red-900/30 rounded-lg text-slate-400 hover:text-red-400 transition-colors" title="Delete"
+                                    className="p-2 bg-slate-950 md:bg-transparent border md:border-transparent border-slate-800 hover:bg-red-900/30 rounded-lg text-slate-400 hover:text-red-400 transition-colors"
                                 >
                                     <Trash2 size={16} />
                                 </button>
                             </div>
                         </div>
 
-                        {/* In-Sample Stats Row */}
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                        {/* Stats Rows */}
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-6">
                              <div className="bg-slate-950 p-3 rounded border border-slate-800">
-                                <span className="text-xs text-slate-500 uppercase block">Sharpe (IS)</span>
-                                <span className="text-lg font-bold text-slate-300">{portfolio.performance.sharpe.toFixed(2)}</span>
+                                <span className="text-[10px] text-slate-500 uppercase block">Sharpe (IS)</span>
+                                <span className="text-base md:text-lg font-bold text-slate-300">{portfolio.performance.sharpe.toFixed(2)}</span>
                              </div>
                              <div className="bg-slate-950 p-3 rounded border border-slate-800">
-                                <span className="text-xs text-slate-500 uppercase block">Ann. Return (IS)</span>
-                                <span className="text-lg font-bold text-slate-300">{(portfolio.performance.annualizedReturn * 100).toFixed(1)}%</span>
+                                <span className="text-[10px] text-slate-500 uppercase block">Return (IS)</span>
+                                <span className="text-base md:text-lg font-bold text-slate-300">{(portfolio.performance.annualizedReturn * 100).toFixed(1)}%</span>
                              </div>
                              
-                             {/* OOS Tracking Section */}
-                             <div className="bg-slate-950 p-3 rounded border border-blue-900/30 md:col-span-3 flex items-center justify-between relative overflow-hidden">
+                             {/* OOS Tracking Section - Stacked on Mobile */}
+                             <div className="col-span-2 md:col-span-3 bg-slate-950 p-3 rounded border border-blue-900/30 flex flex-col md:flex-row md:items-center justify-between relative overflow-hidden gap-3 md:gap-0">
                                 <div className="absolute top-0 right-0 p-1">
-                                    <div className="flex items-center gap-1 bg-blue-500/10 px-1.5 rounded text-[10px] text-blue-400 font-bold uppercase tracking-wider">
+                                    <div className="flex items-center gap-1 bg-blue-500/10 px-1.5 rounded text-[8px] md:text-[10px] text-blue-400 font-bold uppercase tracking-wider">
                                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div> Live / OOS
                                     </div>
                                 </div>
-                                <div className="z-10 px-2">
-                                    <span className="text-xs text-blue-400/70 uppercase block">Return (30d)</span>
-                                    <span className={`text-lg font-bold font-mono ${portfolio.oosPerformance?.returnTD! >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                <div className="z-10 px-2 flex justify-between md:block">
+                                    <span className="text-[10px] text-blue-400/70 uppercase block">Return (30d)</span>
+                                    <span className={`text-base md:text-lg font-bold font-mono ${portfolio.oosPerformance?.returnTD! >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                         {portfolio.oosPerformance?.returnTD ? (portfolio.oosPerformance.returnTD * 100).toFixed(2) : '0.00'}%
                                     </span>
                                 </div>
-                                <div className="z-10 px-2 border-l border-slate-800">
-                                    <span className="text-xs text-blue-400/70 uppercase block">Live Sharpe</span>
-                                    <span className="text-lg font-bold font-mono text-blue-400">
+                                <div className="z-10 px-2 md:border-l border-slate-800 flex justify-between md:block">
+                                    <span className="text-[10px] text-blue-400/70 uppercase block">Live Sharpe</span>
+                                    <span className="text-base md:text-lg font-bold font-mono text-blue-400">
                                         {portfolio.oosPerformance?.sharpe.toFixed(2) || '0.00'}
                                     </span>
                                 </div>
-                                <div className="z-10 px-2 border-l border-slate-800">
-                                    <span className="text-xs text-blue-400/70 uppercase block">Drawdown</span>
-                                    <span className="text-lg font-bold font-mono text-slate-400">
+                                <div className="z-10 px-2 md:border-l border-slate-800 flex justify-between md:block">
+                                    <span className="text-[10px] text-blue-400/70 uppercase block">Drawdown</span>
+                                    <span className="text-base md:text-lg font-bold font-mono text-slate-400">
                                         {(portfolio.oosPerformance?.activeDrawdown || 0 * 100).toFixed(2)}%
                                     </span>
                                 </div>
@@ -257,21 +243,15 @@ const PortfolioLibraryView: React.FC<PortfolioLibraryViewProps> = ({ portfolios,
                         </div>
 
                         {/* Details Footer */}
-                        <div className="border-t border-slate-800 pt-4 flex flex-col md:flex-row gap-4 md:items-center justify-between text-xs text-slate-500">
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                    <Layers size={12} />
-                                    <span>Method: <span className="text-slate-300 font-medium">{portfolio.strategy}</span></span>
-                                </div>
-                                <div>
+                        <div className="border-t border-slate-800 pt-4 flex flex-col md:flex-row gap-2 md:gap-4 justify-between text-xs text-slate-500">
+                            <div className="flex flex-col gap-1">
+                                <span>Method: <span className="text-slate-300 font-medium">{portfolio.strategy}</span></span>
+                                <span className="hidden md:inline">
                                     Included Factors: <span className="text-slate-400 italic">{getFactorNames(portfolio.factorIds)}</span>
-                                </div>
+                                </span>
                             </div>
                             <div className="flex gap-4">
                                 <span>Created: {new Date(portfolio.createdAt).toLocaleDateString()}</span>
-                                <span className="flex items-center gap-1">
-                                    {portfolio.constraints?.sectorNeutral ? <span className="text-emerald-500">Sector Neutral</span> : 'Sector Unconstrained'}
-                                </span>
                             </div>
                         </div>
                     </div>

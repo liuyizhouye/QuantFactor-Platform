@@ -2,7 +2,7 @@
 import React from 'react';
 import { Factor, FactorFrequency } from '../types';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
-import { TrendingUp, Users, Database, Server, Clock, Zap, BookOpen, Activity } from 'lucide-react';
+import { TrendingUp, Users, Database, Server, Clock, Zap, BookOpen, Activity, CheckCircle2 } from 'lucide-react';
 
 interface DashboardProps {
     factors: Factor[];
@@ -22,62 +22,67 @@ const Dashboard: React.FC<DashboardProps> = ({ factors }) => {
   const chartData = Object.keys(categories).map(k => ({ name: k, count: categories[k] }));
 
   return (
-    <div className="h-full overflow-y-auto p-4 md:p-8 space-y-8 pb-20 md:pb-8 max-w-7xl mx-auto">
+    <div className="h-full overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8 pb-20 md:pb-8 max-w-7xl mx-auto">
         <div>
             <h1 className="text-2xl font-bold text-white">Market Overview</h1>
             <p className="text-slate-400 text-sm md:text-base">System status and factor library statistics</p>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-lg">
-                <div className="flex justify-between items-start mb-4">
-                    <div className="p-2 bg-blue-500/10 rounded-lg">
-                        <BookOpen className="text-blue-500" size={24} />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+            <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow-lg">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-2 md:mb-4 gap-2">
+                    <div className="p-2 bg-blue-500/10 rounded-lg w-fit">
+                        <BookOpen className="text-blue-500" size={20} />
                     </div>
-                    <span className="text-xs font-medium text-slate-500 bg-slate-950 px-2 py-1 rounded">Daily</span>
+                    <span className="text-[10px] font-medium text-slate-500 bg-slate-950 px-2 py-1 rounded w-fit">Daily</span>
                 </div>
-                <h3 className="text-3xl font-bold text-white">{lowFreqCount}</h3>
-                <p className="text-sm text-slate-400">Alpha Strategies</p>
+                <h3 className="text-2xl md:text-3xl font-bold text-white">{lowFreqCount}</h3>
+                <p className="text-xs md:text-sm text-slate-400">Alpha Algos</p>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-lg">
-                <div className="flex justify-between items-start mb-4">
-                    <div className="p-2 bg-orange-500/10 rounded-lg">
-                        <Zap className="text-orange-500" size={24} />
+            <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow-lg">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-2 md:mb-4 gap-2">
+                    <div className="p-2 bg-orange-500/10 rounded-lg w-fit">
+                        <Zap className="text-orange-500" size={20} />
                     </div>
-                    <span className="text-xs font-medium text-slate-500 bg-slate-950 px-2 py-1 rounded">Intraday</span>
+                    <span className="text-[10px] font-medium text-slate-500 bg-slate-950 px-2 py-1 rounded w-fit">HFT</span>
                 </div>
-                <h3 className="text-3xl font-bold text-white">{highFreqCount}</h3>
-                <p className="text-sm text-slate-400">HFT Algos</p>
+                <h3 className="text-2xl md:text-3xl font-bold text-white">{highFreqCount}</h3>
+                <p className="text-xs md:text-sm text-slate-400">Intraday Algos</p>
             </div>
 
-             <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-lg">
-                <div className="flex justify-between items-start mb-4">
-                    <div className="p-2 bg-emerald-500/10 rounded-lg">
-                        <Activity className="text-emerald-500" size={24} />
+             <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow-lg">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-2 md:mb-4 gap-2">
+                    <div className="p-2 bg-emerald-500/10 rounded-lg w-fit">
+                        <Activity className="text-emerald-500" size={20} />
                     </div>
-                    <span className="text-xs font-medium text-emerald-500">+12% vs yest</span>
                 </div>
-                <h3 className="text-3xl font-bold text-white">2.4ms</h3>
-                <p className="text-sm text-slate-400">Avg. Execution Latency</p>
+                <h3 className="text-2xl md:text-3xl font-bold text-white">2.4ms</h3>
+                <p className="text-xs md:text-sm text-slate-400">Avg Latency</p>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-lg">
-                <div className="flex justify-between items-start mb-4">
-                    <div className="p-2 bg-purple-500/10 rounded-lg">
-                        <Server className="text-purple-500" size={24} />
+            <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow-lg">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-2 md:mb-4 gap-2">
+                    <div className="p-2 bg-purple-500/10 rounded-lg w-fit">
+                        <Server className="text-purple-500" size={20} />
                     </div>
                 </div>
-                <h3 className="text-3xl font-bold text-white">3</h3>
-                <p className="text-sm text-slate-400">Active Data Nodes</p>
+                <h3 className="text-2xl md:text-3xl font-bold text-white">3</h3>
+                <p className="text-xs md:text-sm text-slate-400">Nodes Active</p>
             </div>
         </div>
         
-        {/* Data Feed Health */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg">
-             <h3 className="text-lg font-bold text-white mb-4">Data Feed Health</h3>
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Data Feed Health - Compact on Mobile */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-6 shadow-lg">
+             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                Data Feed Status
+                {/* Mobile only indicator */}
+                <span className="md:hidden ml-auto text-xs font-normal text-emerald-400 flex items-center gap-1">
+                    <CheckCircle2 size={12}/> All Systems Normal
+                </span>
+             </h3>
+             <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-4">
                  <div className="flex items-center justify-between p-3 border border-slate-800 rounded-lg bg-slate-950">
                     <div className="flex items-center gap-3">
                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
@@ -112,14 +117,14 @@ const Dashboard: React.FC<DashboardProps> = ({ factors }) => {
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-lg">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+            <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow-lg">
                 <h3 className="text-lg font-bold text-white mb-6">Factors by Category</h3>
-                <div className="h-64 w-full">
+                <div className="h-48 md:h-64 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={chartData}>
                             <XAxis dataKey="name" stroke="#64748b" tick={{fontSize: 10}} interval={0} angle={-15} textAnchor="end" height={60} />
-                            <YAxis stroke="#64748b" />
+                            <YAxis stroke="#64748b" width={30} />
                             <Tooltip 
                                 cursor={{fill: '#1e293b'}}
                                 contentStyle={{backgroundColor: '#0f172a', borderColor: '#334155', color: '#e2e8f0'}} 
@@ -130,7 +135,7 @@ const Dashboard: React.FC<DashboardProps> = ({ factors }) => {
                 </div>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-lg">
+            <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow-lg">
                 <h3 className="text-lg font-bold text-white mb-6">Recent Activity</h3>
                 <div className="space-y-4">
                     {[1, 2, 3, 4].map((i) => (

@@ -35,6 +35,9 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor, targetFrequency })
       'Market Data': true, 
       'Tick/Bar Data': true
   });
+  
+  // Mobile: Toggle Result Code Visibility
+  const [showCodeMobile, setShowCodeMobile] = useState(false);
 
   const notify = useNotification();
   const isHighFreq = targetFrequency === FactorFrequency.HIGH_FREQ;
@@ -180,6 +183,7 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor, targetFrequency })
 
     setLoading(true);
     setResult(null);
+    setShowCodeMobile(false);
     
     try {
       const sanitizedPrompt = prompt.replace(/[<>]/g, '');
@@ -220,17 +224,16 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor, targetFrequency })
 
   const insertField = (field: string) => {
       setPrompt(prev => prev + ` ${field} `);
-      // Optional: Flash focus or simple feedback could go here
   };
 
   return (
-    <div className="h-full overflow-y-auto flex flex-col gap-6 p-4 md:p-8 max-w-7xl mx-auto pb-20 md:pb-8">
+    <div className="h-full overflow-y-auto flex flex-col gap-4 md:gap-6 p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
           {isHighFreq ? <Zap className="text-orange-500" size={32} /> : <Pickaxe className="text-blue-500" size={32} />}
-          {isHighFreq ? 'HFT Factor Mining' : 'Alpha Factor Mining'}
+          {isHighFreq ? 'HFT Mining' : 'Alpha Mining'}
         </h1>
-        <p className="text-slate-400 text-sm md:text-base">
+        <p className="text-slate-400 text-sm md:text-base hidden md:block">
           {isHighFreq 
             ? "Discover high-frequency microstructure signals using order book dynamics and tick data."
             : "Generate low-frequency alpha factors based on daily price action and fundamental logic."}
@@ -239,24 +242,22 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor, targetFrequency })
 
       <div className="flex flex-col lg:flex-row gap-6 md:gap-8 min-h-0 relative">
         
-        {/* Input Section (Flexible Width) */}
+        {/* Input Section */}
         <div className={`flex flex-col gap-4 order-2 lg:order-1 transition-all duration-300 ${isDictionaryOpen ? 'lg:w-2/3 xl:w-3/4' : 'lg:w-full'}`}>
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-6 shadow-xl flex flex-col gap-4">
             
-            {/* Status Indicator */}
+            {/* Status Indicator & Mobile Dictionary Toggle */}
             <div className="flex items-center gap-2 p-3 bg-slate-950 rounded-lg border border-slate-800">
                <div className={`w-2 h-2 rounded-full ${isHighFreq ? 'bg-orange-500 animate-pulse' : 'bg-blue-500'}`}></div>
                <span className="text-xs font-mono text-slate-400 uppercase">
-                  Mode: <span className="text-slate-200 font-bold">{isHighFreq ? 'Intraday (Microstructure)' : 'Daily (Fundamentals/Price)'}</span>
+                  Mode: <span className="text-slate-200 font-bold">{isHighFreq ? 'Intraday' : 'Daily'}</span>
                </span>
-               {!isDictionaryOpen && (
-                   <button 
-                    onClick={() => setIsDictionaryOpen(true)}
-                    className="ml-auto text-xs flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors"
-                   >
-                       <SidebarOpen size={14} /> Open Data Dictionary
-                   </button>
-               )}
+               <button 
+                onClick={() => setIsDictionaryOpen(true)}
+                className="ml-auto text-xs flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors lg:hidden"
+               >
+                   <SidebarOpen size={14} /> Dictionary
+               </button>
             </div>
 
             <div>
@@ -268,8 +269,8 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor, targetFrequency })
                     if (error) setError(null);
                 }}
                 placeholder={isHighFreq 
-                    ? "e.g. Detect order book imbalance spikes in 'bid_size_1' vs 'ask_size_1'..." 
-                    : "e.g. Rank stocks by 'roe_ttm' and filter for low 'pe_ttm'..."}
+                    ? "e.g. Detect order book imbalance spikes..." 
+                    : "e.g. Rank stocks by 'roe_ttm'..."}
                 className={`w-full h-32 md:h-40 bg-slate-950 border rounded-lg p-4 text-slate-200 focus:outline-none focus:ring-2 placeholder:text-slate-600 resize-none text-sm font-sans font-mono leading-relaxed ${
                     error 
                     ? 'border-red-500/50 focus:ring-red-500/50' 
@@ -300,38 +301,46 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor, targetFrequency })
 
           {/* Results Area */}
           {result ? (
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 md:p-8 shadow-xl flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-6 shadow-xl flex flex-col gap-4 md:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                 <div>
                   <span className="inline-block px-2 py-1 bg-purple-500/10 text-purple-400 text-xs font-bold rounded mb-2 border border-purple-500/20 uppercase tracking-wider">
                     {result.category}
                   </span>
-                  <h2 className="text-2xl font-bold text-white">{result.name}</h2>
-                  <p className="text-slate-400 mt-1">{result.description}</p>
+                  <h2 className="text-xl md:text-2xl font-bold text-white">{result.name}</h2>
+                  <p className="text-slate-400 mt-1 text-sm md:text-base">{result.description}</p>
                 </div>
                 <button 
                     onClick={handleSave}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors w-full sm:w-auto justify-center"
+                    className="flex items-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-bold transition-colors w-full sm:w-auto justify-center shadow-lg shadow-emerald-900/20"
                 >
-                    <Save size={16} />
-                    Save to Library
+                    <Save size={18} />
+                    Save Library
                 </button>
               </div>
 
-              <div className="bg-slate-950 rounded-lg border border-slate-800 overflow-hidden">
+              {/* Mobile Code Toggle */}
+              <button 
+                className="md:hidden text-xs text-blue-400 flex items-center gap-1 font-medium"
+                onClick={() => setShowCodeMobile(!showCodeMobile)}
+              >
+                  <Code2 size={12}/> {showCodeMobile ? "Hide Python Logic" : "Show Python Logic"}
+              </button>
+
+              <div className={`bg-slate-950 rounded-lg border border-slate-800 overflow-hidden ${showCodeMobile ? 'block' : 'hidden md:block'}`}>
                 <div className="bg-slate-900/50 px-4 py-2 border-b border-slate-800 flex items-center gap-2">
                   <Code2 size={14} className="text-slate-400" />
                   <span className="text-xs font-mono text-slate-400">factor_logic.py</span>
                 </div>
                 <div className="p-4 overflow-x-auto">
-                    <pre className="text-sm font-mono text-blue-300">
+                    <pre className="text-xs md:text-sm font-mono text-blue-300">
                         <code>{result.formula}</code>
                     </pre>
                 </div>
               </div>
 
-              <div className="flex-1 bg-slate-900/50 rounded-lg p-6 border border-slate-800/50">
-                 <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-3">Alpha Logic & Data Usage</h3>
+              <div className="flex-1 bg-slate-900/50 rounded-lg p-4 md:p-6 border border-slate-800/50">
+                 <h3 className="text-xs md:text-sm font-bold text-slate-300 uppercase tracking-wider mb-2">Alpha Logic</h3>
                  <p className="text-slate-300 leading-relaxed text-sm md:text-base">
                     {result.logic_explanation}
                  </p>
@@ -342,97 +351,100 @@ const MiningView: React.FC<MiningViewProps> = ({ onAddFactor, targetFrequency })
               <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center">
                  <ArrowRight size={24} className="text-slate-600" />
               </div>
-              <p className="text-center">Generated factors will appear here...</p>
+              <p className="text-center text-sm">Generated factors will appear here...</p>
             </div>
           )}
         </div>
 
-        {/* Right Panel: Data Dictionary (Collapsible) */}
+        {/* Right Panel: Data Dictionary (Drawer on Mobile) */}
+        {/* Overlay for Mobile */}
         {isDictionaryOpen && (
-            <div className="lg:w-1/3 xl:w-1/4 order-1 lg:order-2 flex flex-col min-h-[500px]">
-                <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg sticky top-6 max-h-[calc(100vh-100px)] flex flex-col">
-                     {/* Header */}
-                     <div className="p-4 border-b border-slate-800 bg-slate-950/50 flex items-center justify-between shrink-0">
-                        <h3 className="font-bold text-slate-200 flex items-center gap-2 text-sm">
-                            <Database size={16} className="text-purple-500" /> Schema Explorer
-                        </h3>
-                        <div className="flex items-center gap-2">
-                             <div className="text-[10px] text-slate-500 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
-                                {filteredColumns.reduce((acc, cat) => acc + cat.fields.length, 0)} fields
-                            </div>
-                            <button onClick={() => setIsDictionaryOpen(false)} className="text-slate-500 hover:text-white transition-colors">
-                                <SidebarClose size={16} />
-                            </button>
+            <div className="fixed inset-0 bg-black/60 z-40 lg:hidden" onClick={() => setIsDictionaryOpen(false)} />
+        )}
+        
+        <div className={`
+            fixed inset-y-0 right-0 z-50 w-80 bg-slate-900 shadow-2xl transform transition-transform duration-300
+            lg:static lg:transform-none lg:w-1/3 xl:w-1/4 lg:shadow-none lg:z-auto
+            ${isDictionaryOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0 lg:block hidden'}
+        `}>
+             <div className="flex flex-col h-full lg:h-auto lg:min-h-[500px] bg-slate-900 border-l lg:border border-slate-800 lg:rounded-xl overflow-hidden">
+                 {/* Header */}
+                 <div className="p-4 border-b border-slate-800 bg-slate-950/50 flex items-center justify-between shrink-0">
+                    <h3 className="font-bold text-slate-200 flex items-center gap-2 text-sm">
+                        <Database size={16} className="text-purple-500" /> Schema Explorer
+                    </h3>
+                    <div className="flex items-center gap-2">
+                         <div className="text-[10px] text-slate-500 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                            {filteredColumns.reduce((acc, cat) => acc + cat.fields.length, 0)} fields
                         </div>
-                    </div>
-                    
-                    {/* Search Bar */}
-                    <div className="p-3 border-b border-slate-800 bg-slate-900 shrink-0">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-2.5 text-slate-500" size={14} />
-                            <input 
-                                type="text"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder="Search fields (e.g. 'vol', 'bid')..."
-                                className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 placeholder:text-slate-600"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Scrollable List */}
-                    <div className="overflow-y-auto flex-1 p-2 space-y-2 scrollbar-thin scrollbar-thumb-slate-700">
-                        {filteredColumns.map((group, idx) => {
-                            const isExpanded = !!expandedCategories[group.category] || searchTerm.length > 0;
-                            return (
-                                <div key={idx} className="bg-slate-950/30 rounded-lg border border-slate-800/50 overflow-hidden">
-                                    <button 
-                                        onClick={() => toggleCategory(group.category)}
-                                        className="w-full px-3 py-2 flex items-center justify-between bg-slate-900/50 hover:bg-slate-800 transition-colors"
-                                    >
-                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                                           {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                                           {group.category}
-                                        </span>
-                                        <span className="text-[10px] text-slate-600">{group.fields.length}</span>
-                                    </button>
-                                    
-                                    {isExpanded && (
-                                        <div className="p-2 grid gap-1">
-                                            {group.fields.map(field => (
-                                                <button 
-                                                    key={field.name}
-                                                    onClick={() => insertField(field.name)}
-                                                    className="group flex items-center justify-between px-3 py-2 rounded bg-slate-950 hover:bg-blue-900/10 hover:border-blue-500/30 border border-transparent transition-all text-left w-full"
-                                                    title={field.desc}
-                                                >
-                                                    <div className="flex flex-col min-w-0">
-                                                        <span className="text-xs font-mono text-slate-300 group-hover:text-blue-300 font-medium truncate">
-                                                            {field.name}
-                                                        </span>
-                                                        <span className="text-[10px] text-slate-500 truncate group-hover:text-slate-400">
-                                                            {field.desc}
-                                                        </span>
-                                                    </div>
-                                                    <span className="shrink-0 ml-2 text-[9px] font-mono text-slate-600 bg-slate-900 px-1 rounded border border-slate-800 group-hover:border-blue-900 group-hover:text-blue-400">
-                                                        {field.type}
-                                                    </span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                        {filteredColumns.length === 0 && (
-                            <div className="p-4 text-center text-slate-500 text-xs">
-                                No fields match "{searchTerm}"
-                            </div>
-                        )}
+                        <button onClick={() => setIsDictionaryOpen(false)} className="text-slate-500 hover:text-white transition-colors lg:hidden">
+                            <SidebarClose size={16} />
+                        </button>
+                         <button onClick={() => setIsDictionaryOpen(false)} className="text-slate-500 hover:text-white transition-colors hidden lg:block">
+                            <SidebarClose size={16} />
+                        </button>
                     </div>
                 </div>
+                
+                {/* Search Bar */}
+                <div className="p-3 border-b border-slate-800 bg-slate-900 shrink-0">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-2.5 text-slate-500" size={14} />
+                        <input 
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Search fields..."
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                        />
+                    </div>
+                </div>
+
+                {/* Scrollable List */}
+                <div className="overflow-y-auto flex-1 p-2 space-y-2 scrollbar-thin scrollbar-thumb-slate-700">
+                    {filteredColumns.map((group, idx) => {
+                        const isExpanded = !!expandedCategories[group.category] || searchTerm.length > 0;
+                        return (
+                            <div key={idx} className="bg-slate-950/30 rounded-lg border border-slate-800/50 overflow-hidden">
+                                <button 
+                                    onClick={() => toggleCategory(group.category)}
+                                    className="w-full px-3 py-2 flex items-center justify-between bg-slate-900/50 hover:bg-slate-800 transition-colors"
+                                >
+                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                       {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                                       {group.category}
+                                    </span>
+                                </button>
+                                
+                                {isExpanded && (
+                                    <div className="p-2 grid gap-1">
+                                        {group.fields.map(field => (
+                                            <button 
+                                                key={field.name}
+                                                onClick={() => {
+                                                    insertField(field.name);
+                                                    if(window.innerWidth < 1024) setIsDictionaryOpen(false); // Auto close on mobile
+                                                }}
+                                                className="group flex items-center justify-between px-3 py-2 rounded bg-slate-950 hover:bg-blue-900/10 border border-transparent hover:border-blue-500/30 text-left w-full"
+                                            >
+                                                <div className="flex flex-col min-w-0">
+                                                    <span className="text-xs font-mono text-slate-300 group-hover:text-blue-300 font-medium truncate">
+                                                        {field.name}
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-500 truncate">
+                                                        {field.desc}
+                                                    </span>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
-        )}
+        </div>
 
       </div>
     </div>
